@@ -6,6 +6,7 @@ Portail français organisé en pages séparées, avec Supabase pour l’authenti
 - `dashboard.html` / `dashboard.css` : tableau de bord public et gestion des dossiers autorisés.
 - `contact.html` / `contact.css` : présentation de la messagerie visiteurs.
 - `messages.html` / `messages.css` : boîte de réception des agents.
+- `maintenance.html` / `maintenance.css` : réglages de maintenance réservés au superadmin.
 - `chat-widget.css` : bulle de messagerie partagée sur les pages du site.
 - `connexion.html` / `connexion.css` : connexion des comptes agents.
 - `agents.html` / `agents.css` : gestion des comptes, réservée au niveau 5.
@@ -15,12 +16,13 @@ Portail français organisé en pages séparées, avec Supabase pour l’authenti
 - `supabase/schema.sql` : tables, génération de codes, règles d’accès et journalisation.
 - `supabase/chat.sql` : migration de conversations, messages et accès visiteur.
 - `supabase/maintenance.sql` : réglages de maintenance globale et par page, contrôlés par le superadmin officiel.
+- `supabase/level-zero.sql` : migration pour autoriser les dossiers de niveau 0 sans perdre les données.
 - `supabase/functions/manage-agent/index.ts` : création, modification et suppression sécurisées de comptes.
 - `database.sql` : ancien schéma SQLite local, conservé en archive ; le portail Supabase ne l’utilise plus.
 
 ## Mise en place Supabase
 
-1. Dans le tableau de bord Supabase, ouvrez **SQL Editor**, exécutez d’abord `supabase/schema.sql`, puis `supabase/chat.sql` et enfin `supabase/maintenance.sql`. Les migrations de chat et de maintenance peuvent être relancées sans supprimer les données existantes.
+1. Dans le tableau de bord Supabase, ouvrez **SQL Editor**, exécutez d’abord `supabase/schema.sql`, puis `supabase/chat.sql`, `supabase/maintenance.sql` et `supabase/level-zero.sql`. Les migrations peuvent être relancées sans supprimer les données existantes.
 2. Dans **Authentication > Providers / Sign In**, activez les connexions anonymes (**Anonymous Sign-Ins**) pour autoriser les visiteurs à ouvrir un chat sans compte. Gardez les inscriptions par e-mail désactivées ; les comptes agents sont créés depuis la page Comptes par un agent niveau 5.
 3. Dans **Authentication > Users**, créez puis confirmez l’utilisateur officiel `directionagencerenseignement@gmail.com`. Ne place pas son mot de passe dans Git, dans `config.js` ou dans un fichier SQL.
 4. Dans **SQL Editor**, exécutez `supabase/first-admin.sql` pour attribuer le niveau 5 et le rôle protégé d’administrateur officiel à ce compte Auth déjà créé. Si le compte existe déjà, réexécutez ce script après la migration.
@@ -28,7 +30,7 @@ Portail français organisé en pages séparées, avec Supabase pour l’authenti
 6. Installez la Supabase CLI, lancez `supabase login`, puis déployez la fonction depuis la racine du projet avec `supabase functions deploy manage-agent --project-ref <reference-du-projet>`. Vérifiez les secrets de fonctions dans le tableau de bord ; si `SUPABASE_SERVICE_ROLE_KEY` n’y est pas disponible, ajoutez-la uniquement dans **Edge Functions > Secrets**. Ne partagez jamais cette clé et ne la mettez jamais dans les fichiers du site. Si la fonction n’est pas déployée, la page Comptes affichera une erreur 404 explicite à l’enregistrement.
 7. Publiez les fichiers du site sur un hébergement statique via HTTPS.
 
-Le niveau d’accès est compris entre 1 et 5. Les visiteurs non connectés ne voient que les dossiers de niveau 1 ; un agent ne voit que les dossiers jusqu’à son niveau. Un dossier au statut `Classified` est forcé au niveau 5 côté base. Les changements de dossiers et de comptes, ainsi que les connexions et déconnexions, alimentent le journal.
+Le niveau d’accès agent est compris entre 1 et 5. Les dossiers vont du niveau 0 à 5 ; les visiteurs et tous les agents de niveau 1 voient les dossiers de niveau 0 et 1. Un dossier au statut `Classified` est forcé au niveau 5 côté base. Les changements de dossiers et de comptes, ainsi que les connexions et déconnexions, alimentent le journal.
 
 ## Messagerie
 
@@ -42,7 +44,9 @@ Le compte officiel marqué par `supabase/first-admin.sql` est exempté des restr
 
 ## Maintenance du site
 
-Après exécution de `supabase/maintenance.sql`, le superadmin officiel trouvera les réglages de maintenance dans la page **Comptes** : maintenance complète ou indépendante pour chaque page. Les paramètres sont lus publiquement afin que le navigateur puisse afficher l’écran de maintenance, mais seul le compte officiel peut les modifier. Le superadmin conserve l’accès pendant la maintenance ; la page de connexion reste disponible pour pouvoir se reconnecter. Une erreur de lecture des paramètres affiche un avertissement et laisse le site accessible.
+Après exécution de `supabase/maintenance.sql`, le superadmin officiel trouvera une catégorie **Maintenance** dédiée : maintenance complète ou indépendante pour chaque page, avec une raison personnalisable. Les paramètres sont lus publiquement afin que le navigateur puisse afficher l’écran de maintenance, mais seul le compte officiel peut les modifier. Le superadmin conserve l’accès pendant la maintenance ; la page de connexion reste disponible pour pouvoir se reconnecter. Une erreur de lecture des paramètres affiche un avertissement et laisse le site accessible.
+
+Le code source HTML, CSS et JavaScript envoyé au navigateur est nécessairement visible dans les outils développeur, même sur GitHub Pages. Il ne faut pas y placer de secrets. La sécurité réelle repose sur Supabase RLS et les fonctions serveur ; la clé `anon` est publique par conception, tandis que `service_role` doit rester uniquement dans les secrets Edge Functions.
 
 Le mot de passe PostgreSQL ne doit être utilisé que pour l’administration de la base, jamais dans le navigateur ou dans Git. Si un mot de passe de base a été partagé dans une conversation, régénérez-le dans Supabase.
 

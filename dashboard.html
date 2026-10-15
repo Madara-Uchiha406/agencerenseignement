@@ -23,6 +23,7 @@
       <a href="contact.html"><i class="fa-regular fa-envelope" aria-hidden="true"></i> Contact</a>
       <a href="index.html"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Informations</a>
       <a href="messages.html" data-message-link hidden><i class="fa-regular fa-comments" aria-hidden="true"></i> Messages</a>
+      <a href="maintenance.html" data-maintenance-link hidden><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i> Maintenance</a>
       <a href="agents.html" data-agent-link="agents" hidden><i class="fa-solid fa-users-gear" aria-hidden="true"></i> Comptes</a>
       <a href="journal.html" data-audit-link hidden><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Journal</a>
     </nav>
@@ -55,7 +56,7 @@
         </table>
       </div>
     </section>
-    <p class="notice"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Les dossiers sont filtrés selon le niveau d’accès de votre compte. Les visiteurs non connectés ne voient que les dossiers de niveau 1.</p>
+    <p class="notice"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Les dossiers sont filtrés selon le niveau d’accès de votre compte. Les visiteurs non connectés voient les dossiers de niveaux 0 et 1.</p>
   </main>
   <footer class="site-footer">Agence de renseignement — Site 11 · Portail de démonstration</footer>
 
@@ -65,7 +66,7 @@
       <form id="dossier-form">
         <div class="form-group"><label for="form-code">Code dossier (attribué automatiquement)</label><input class="form-control" id="form-code" disabled></div>
         <div class="form-group"><label for="form-sujet">Sujet</label><input class="form-control" id="form-sujet" required></div>
-        <div class="form-group"><label for="form-niveau">Niveau d’accès</label><select class="form-control" id="form-niveau"><option value="Niveau 1">Niveau 1</option><option value="Niveau 2">Niveau 2</option><option value="Niveau 3">Niveau 3</option><option value="Niveau 4">Niveau 4</option><option value="Niveau 5">Niveau 5</option></select></div>
+        <div class="form-group"><label for="form-niveau">Niveau d’accès</label><select class="form-control" id="form-niveau"><option value="Niveau 0">Niveau 0</option><option value="Niveau 1">Niveau 1</option><option value="Niveau 2">Niveau 2</option><option value="Niveau 3">Niveau 3</option><option value="Niveau 4">Niveau 4</option><option value="Niveau 5">Niveau 5</option></select></div>
         <div class="form-group"><label for="form-statut">Statut</label><select class="form-control" id="form-statut" required><option>Classified</option><option>Fini de traitement</option><option>En cours de traitement</option><option selected>En attente de traitement</option></select><small class="form-hint">Le statut Classified impose automatiquement le niveau 5.</small></div>
         <p class="form-feedback" id="dossier-feedback" role="status" aria-live="polite"></p>
         <div class="modal-actions"><button class="btn-logout" id="cancel-modal" type="button">Annuler</button><button class="btn-add" type="submit">Enregistrer</button></div>

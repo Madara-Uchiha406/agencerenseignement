@@ -19,7 +19,8 @@ const MAINTENANCE_PAGES = [
   ["messages.html", "Messages agents"],
   ["agents.html", "Comptes agents"],
   ["journal.html", "Journal"],
-  ["status.html", "État du site"]
+  ["status.html", "État du site"],
+  ["maintenance.html", "Maintenance"]
 ];
 
 function getSupabase() {
@@ -104,6 +105,9 @@ function updateSessionControls() {
   document.querySelectorAll("[data-message-link]").forEach(link => {
     link.hidden = !active;
   });
+  document.querySelectorAll("[data-maintenance-link]").forEach(link => {
+    link.hidden = !active || !currentAgent.is_super_admin;
+  });
 }
 
 function currentPageKey() {
@@ -176,42 +180,65 @@ function renderMaintenanceControls(settings) {
     checkbox.id = checkboxId;
     checkbox.setAttribute("aria-label", `Activer la maintenance : ${label}`);
     checkbox.checked = Boolean(state?.enabled);
+    let savedEnabled = checkbox.checked;
     title.htmlFor = checkboxId;
     title.textContent = label;
+    const controls = document.createElement("div");
+    controls.className = "maintenance-row-controls";
+    const reason = document.createElement("textarea");
+    reason.className = "maintenance-reason";
+    reason.maxLength = 300;
+    reason.rows = 2;
+    reason.value = state?.message || "Le site est temporairement en maintenance. Merci de revenir plus tard.";
+    reason.setAttribute("aria-label", `Raison affichée pour ${label}`);
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "btn-primary";
+    save.textContent = "Enregistrer";
     caption.appendChild(title);
     if (pageKey === "*") {
       const hint = document.createElement("small");
       hint.textContent = "Bloque toutes les pages publiques, sauf l’accès du superadmin.";
       caption.appendChild(hint);
     }
-    checkbox.addEventListener("change", async () => {
+    const persist = async () => {
       checkbox.disabled = true;
+      reason.disabled = true;
+      save.disabled = true;
       setFeedback("maintenance-feedback", "");
       try {
         const { error } = await getSupabase().rpc("set_site_maintenance", {
           p_page_key: pageKey,
           p_enabled: checkbox.checked,
-          p_message: state?.message || null
+          p_message: reason.value.trim()
         });
         if (error) throw error;
+        savedEnabled = checkbox.checked;
         setFeedback("maintenance-feedback", `${label} : maintenance ${checkbox.checked ? "activée" : "désactivée"}.`, false);
       } catch (error) {
-        checkbox.checked = !checkbox.checked;
+        checkbox.checked = savedEnabled;
         setFeedback("maintenance-feedback", friendlyError(error));
       } finally {
         checkbox.disabled = false;
+        reason.disabled = false;
+        save.disabled = false;
       }
-    });
-    row.appendChild(caption);
-    row.appendChild(checkbox);
+    };
+    checkbox.addEventListener("change", persist);
+    save.addEventListener("click", persist);
+    controls.append(checkbox, save);
+    caption.appendChild(reason);
+    row.append(caption, controls);
     container.appendChild(row);
   }
 }
 
-async function initializeMaintenanceControls() {
-  const panel = document.getElementById("maintenance-panel");
-  if (!panel || !currentAgent?.is_super_admin) return;
-  panel.hidden = false;
+async function initializeMaintenancePage() {
+  const agent = await loadCurrentAgent();
+  if (!agent?.is_super_admin) {
+    window.location.replace("index.html");
+    return;
+  }
   try {
     const { data, error } = await getSupabase().rpc("get_site_maintenance");
     if (error) throw error;
@@ -1093,7 +1120,6 @@ async function initializeAgentsPage() {
   } catch (error) {
     setFeedback("agents-feedback", friendlyError(error));
   }
-  await initializeMaintenanceControls();
 }
 
 async function initializeActivityPage() {
@@ -1146,6 +1172,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     else if (document.getElementById("agents-table-body")) await initializeAgentsPage();
     else if (document.getElementById("activity-table-body")) await initializeActivityPage();
     else if (document.getElementById("messages-conversation-list")) await initializeMessagesPage();
+    else if (document.getElementById("maintenance-controls")) await initializeMaintenancePage();
     else {
       const agent = await loadCurrentAgent();
       if (loginForm && agent) window.location.replace("dashboard.html");
@@ -1156,6 +1183,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (document.getElementById("dashboard-feedback")) setFeedback("dashboard-feedback", friendlyError(error));
     if (document.getElementById("agents-feedback")) setFeedback("agents-feedback", friendlyError(error));
     if (document.getElementById("activity-feedback")) setFeedback("activity-feedback", friendlyError(error));
+    if (document.getElementById("maintenance-feedback")) setFeedback("maintenance-feedback", friendlyError(error));
   }
   await initializeChatWidget();
 });

@@ -55,7 +55,7 @@
     </section>
     <p class="privacy">Le contrôle des données vérifie seulement si le service Supabase et la lecture publique des dossiers répondent. Les conversations, comptes agents et journaux ne sont jamais consultés par cette page.</p>
   </main>
-  <footer>Agence de renseignement — Site 11 · <a href="contact.html">Contact</a></footer>
+  <footer>Agence de renseignement — Site 11 · <a href="contact.html">Contact</a> · <a href="maintenance.html" data-maintenance-link hidden>Maintenance</a></footer>
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
@@ -68,7 +68,8 @@
       ["Messages agents", "messages.html"],
       ["Comptes agents", "agents.html"],
       ["Journal", "journal.html"],
-      ["État du site", "status.html"]
+      ["État du site", "status.html"],
+      ["Maintenance", "maintenance.html"]
     ];
     const list = document.getElementById("status-list");
     const refreshButton = document.getElementById("refresh-status");
