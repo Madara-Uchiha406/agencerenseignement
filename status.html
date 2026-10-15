@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0d14">
+  <meta name="description" content="État public des pages et des données accessibles du portail Site 11.">
+  <title>État du site — Agence de renseignement, Site 11</title>
+  <link rel="stylesheet" href="chat-widget.css">
+  <style>
+    :root{color-scheme:dark;--bg:#0a0d14;--panel:#121824;--border:#1e293b;--cyan:#00f0ff;--green:#4ade80;--red:#fb7185;--yellow:#fbbf24;--text:#f8fafc;--muted:#94a3b8;font-family:Inter,Arial,sans-serif}
+    *{box-sizing:border-box}
+    body{min-height:100vh;margin:0;color:var(--text);background:radial-gradient(ellipse at 50% -25%,#14243a 0,var(--bg) 56%)}
+    header,main,footer{width:min(820px,calc(100% - 2rem));margin-inline:auto}
+    header{padding:1.5rem 0;border-bottom:1px solid var(--border)}
+    header a{color:var(--cyan);font-weight:700;text-decoration:none}
+    main{padding:clamp(2rem,6vw,4rem) 0}
+    .eyebrow{margin:0 0 .6rem;color:var(--cyan);font:600 .72rem 'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase}
+    h1{margin:0;font-size:clamp(1.7rem,5vw,2.4rem)}
+    .intro{margin:.8rem 0 1.5rem;color:var(--muted);line-height:1.7}
+    .panel{padding:1.2rem;background:var(--panel);border:1px solid var(--border);border-radius:10px}
+    .status-list{display:grid;gap:.7rem;margin:0;padding:0;list-style:none}
+    .status-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.85rem;background:#0a0d14;border:1px solid var(--border);border-radius:7px}
+    .status-row strong{font-size:.92rem}
+    .state{flex:none;color:var(--muted);font-size:.8rem}
+    .state::before{display:inline-block;width:.55rem;height:.55rem;margin-right:.45rem;border-radius:50%;background:var(--yellow);content:"";vertical-align:middle}
+    .state.ok{color:var(--green)}.state.ok::before{background:var(--green)}
+    .state.error{color:var(--red)}.state.error::before{background:var(--red)}
+    .details{margin:.35rem 0 0;color:var(--muted);font-size:.76rem}
+    .actions{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1rem}
+    button{padding:.65rem .9rem;color:#061016;background:var(--cyan);border:0;border-radius:6px;font:700 .85rem Inter,Arial,sans-serif;cursor:pointer}
+    button:disabled{opacity:.6;cursor:wait}
+    #checked-at{color:var(--muted);font-size:.75rem;text-align:right}
+    .privacy{margin:1rem 0 0;color:var(--muted);font-size:.78rem;line-height:1.6}
+    footer{padding:1.2rem 0;color:var(--muted);border-top:1px solid var(--border);font-size:.75rem}
+    footer a{color:var(--cyan)}
+    @media(max-width:480px){.status-row{align-items:flex-start;flex-direction:column;gap:.4rem}.actions{align-items:flex-start;flex-direction:column}#checked-at{text-align:left}}
+  </style>
+</head>
+<body>
+  <header><a href="index.html">← Retour au portail Site 11</a></header>
+  <main>
+    <p class="eyebrow">Page publique · État des services</p>
+    <h1>État du site</h1>
+    <p class="intro">Vérification des pages publiques et de l’accès public aux données. Cette page ne montre aucun dossier ni aucune information privée.</p>
+    <section class="panel" aria-label="État des pages et des données">
+      <ul class="status-list" id="status-list" aria-live="polite">
+        <li class="status-row"><strong>Pages du site</strong><span class="state">Vérification…</span></li>
+        <li class="status-row"><strong>Données publiques</strong><span class="state">Vérification…</span></li>
+      </ul>
+      <div class="actions">
+        <button id="refresh-status" type="button">Actualiser</button>
+        <span id="checked-at">Dernière vérification : en cours…</span>
+      </div>
+    </section>
+    <p class="privacy">Le contrôle des données vérifie seulement si le service Supabase et la lecture publique des dossiers répondent. Les conversations, comptes agents et journaux ne sont jamais consultés par cette page.</p>
+  </main>
+  <footer>Agence de renseignement — Site 11 · <a href="contact.html">Contact</a></footer>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+  <script>
+    const pagesToCheck = [
+      ["Informations", "index.html"],
+      ["Dashboard", "dashboard.html"],
+      ["Contact / messagerie", "contact.html"],
+      ["Connexion", "connexion.html"],
+      ["Messages agents", "messages.html"],
+      ["Comptes agents", "agents.html"],
+      ["Journal", "journal.html"],
+      ["État du site", "status.html"]
+    ];
+    const list = document.getElementById("status-list");
+    const refreshButton = document.getElementById("refresh-status");
+    const checkedAt = document.getElementById("checked-at");
+
+    function makeStatusRow(name, stateText, stateClass, detail) {
+      const item = document.createElement("li");
+      item.className = "status-row";
+      const label = document.createElement("strong");
+      label.textContent = name;
+      const result = document.createElement("span");
+      result.className = `state ${stateClass}`;
+      result.textContent = stateText;
+      const content = document.createElement("div");
+      content.append(label);
+      if (detail) {
+        const description = document.createElement("p");
+        description.className = "details";
+        description.textContent = detail;
+        content.append(description);
+      }
+      item.append(content, result);
+      return item;
+    }
+
+    async function checkPage(name, path) {
+      try {
+        const response = await fetch(path, { method: "HEAD", cache: "no-store" });
+        return response.ok
+          ? makeStatusRow(name, "En ligne", "ok")
+          : makeStatusRow(name, `Erreur ${response.status}`, "error");
+      } catch {
+        return makeStatusRow(name, "Inaccessible", "error", "Vérifiez que le site est publié sur un serveur web.");
+      }
+    }
+
+    async function checkPublicData() {
+      if (typeof AR_CONFIG === "undefined" || !AR_CONFIG.supabaseUrl || !AR_CONFIG.supabaseAnonKey) {
+        return makeStatusRow("Données publiques", "Non configuré", "error", "L’URL et la clé publique Supabase doivent être configurées.");
+      }
+      try {
+        const endpoint = new URL("/rest/v1/dossiers?select=id&limit=1", AR_CONFIG.supabaseUrl);
+        const response = await fetch(endpoint, {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            apikey: AR_CONFIG.supabaseAnonKey,
+            Authorization: `Bearer ${AR_CONFIG.supabaseAnonKey}`,
+            Accept: "application/json"
+          }
+        });
+        if (response.ok) {
+          return makeStatusRow("Données publiques", "En ligne", "ok", "Base joignable et lecture publique des dossiers disponible.");
+        }
+        if (response.status === 404) {
+          return makeStatusRow("Données publiques", "Table indisponible", "error", "La table des dossiers est absente ou l’API ne la trouve pas.");
+        }
+        if (response.status === 401 || response.status === 403) {
+          return makeStatusRow("Données publiques", "Accès refusé", "error", "Vérifiez la clé publique et les règles de lecture publique.");
+        }
+        return makeStatusRow("Données publiques", `Erreur ${response.status}`, "error", "Le service de données a répondu avec une erreur.");
+      } catch {
+        return makeStatusRow("Données publiques", "Inaccessible", "error", "Vérifiez la connexion réseau et l’URL Supabase.");
+      }
+    }
+
+    async function refreshStatus() {
+      refreshButton.disabled = true;
+      refreshButton.textContent = "Vérification…";
+      checkedAt.textContent = "Dernière vérification : en cours…";
+      list.replaceChildren();
+      const results = await Promise.all([
+        ...pagesToCheck.map(([name, path]) => checkPage(name, path)),
+        checkPublicData()
+      ]);
+      list.replaceChildren(...results);
+      checkedAt.textContent = `Dernière vérification : ${new Date().toLocaleString("fr-FR")}`;
+      refreshButton.disabled = false;
+      refreshButton.textContent = "Actualiser";
+    }
+
+    refreshButton.addEventListener("click", refreshStatus);
+    refreshStatus();
+  </script>
+</body>
+</html>

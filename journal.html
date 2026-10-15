@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0d14">
+  <meta name="description" content="Journal d'activité des agents du Site 11.">
+  <title>Journal d’activité — Agence de renseignement, Site 11</title>
+  <link rel="stylesheet" href="journal.css">
+  <link rel="stylesheet" href="chat-widget.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Orbitron:wght@500;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Agence de renseignement, accueil">
+      <i class="fa-solid fa-shield-halved brand-icon" aria-hidden="true"></i>
+      <span><strong>AGENCE DE RENSEIGNEMENT</strong><small>SITE 11 — PORTAIL OFFICIEL</small></span>
+    </a>
+    <nav class="site-nav" aria-label="Navigation principale">
+      <a href="dashboard.html"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> Dashboard</a>
+      <a href="contact.html"><i class="fa-regular fa-envelope" aria-hidden="true"></i> Contact</a>
+      <a href="index.html"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Informations</a>
+      <a href="messages.html" data-message-link hidden><i class="fa-regular fa-comments" aria-hidden="true"></i> Messages</a>
+      <a href="agents.html" data-agent-link="agents" hidden><i class="fa-solid fa-users-gear" aria-hidden="true"></i> Comptes</a>
+      <a class="active" href="journal.html" data-audit-link aria-current="page"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Journal</a>
+    </nav>
+    <div class="header-actions">
+      <div class="user-badge" id="user-badge" hidden><span class="status-dot"></span></div>
+      <a class="btn-primary" id="login-link" href="connexion.html"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Connexion</a>
+      <button class="btn-logout" id="logout-button" type="button" hidden><i class="fa-solid fa-power-off" aria-hidden="true"></i> Déconnexion</button>
+    </div>
+  </header>
+  <main>
+    <p class="eyebrow">Traçabilité · Niveaux 4 et 5</p>
+    <h1 class="page-title">Journal d’activité</h1>
+    <p class="page-intro">Les actions sur les dossiers et les comptes agents sont horodatées et attribuées au compte qui les a effectuées. Les 250 événements les plus récents sont affichés.</p>
+    <p class="notice"><i class="fa-solid fa-lock" aria-hidden="true"></i> Réservé aux agents actifs de niveau 4 ou 5. Les entrées sont conservées côté serveur et ne sont pas modifiables depuis le portail.</p>
+    <section class="panel">
+      <p class="form-feedback" id="activity-feedback" role="status" aria-live="polite"></p>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>DATE</th><th>AGENT</th><th>ACTION</th><th>CIBLE</th><th>DÉTAILS</th></tr></thead>
+        <tbody id="activity-table-body"></tbody>
+      </table></div>
+    </section>
+  </main>
+  <footer class="site-footer">Agence de renseignement — Site 11 · Journal d’audit</footer>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>

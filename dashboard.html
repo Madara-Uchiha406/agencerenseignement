@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0d14">
+  <meta name="description" content="Tableau de bord des dossiers du Site 11.">
+  <title>Dashboard — Agence de renseignement, Site 11</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="chat-widget.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Orbitron:wght@500;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Agence de renseignement, accueil">
+      <i class="fa-solid fa-shield-halved brand-icon" aria-hidden="true"></i>
+      <span><strong>AGENCE DE RENSEIGNEMENT</strong><small>SITE 11 — PORTAIL OFFICIEL</small></span>
+    </a>
+    <nav class="site-nav" aria-label="Navigation principale">
+      <a class="active" href="dashboard.html" aria-current="page"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> Dashboard</a>
+      <a href="contact.html"><i class="fa-regular fa-envelope" aria-hidden="true"></i> Contact</a>
+      <a href="index.html"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Informations</a>
+      <a href="messages.html" data-message-link hidden><i class="fa-regular fa-comments" aria-hidden="true"></i> Messages</a>
+      <a href="agents.html" data-agent-link="agents" hidden><i class="fa-solid fa-users-gear" aria-hidden="true"></i> Comptes</a>
+      <a href="journal.html" data-audit-link hidden><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Journal</a>
+    </nav>
+    <div class="header-actions">
+      <div class="user-badge" id="user-badge" hidden><span class="status-dot"></span> SESSION AGENT</div>
+      <a class="btn-primary" id="login-link" href="connexion.html"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Connexion</a>
+      <button class="btn-logout" id="logout-button" type="button" hidden><i class="fa-solid fa-power-off" aria-hidden="true"></i> Déconnexion</button>
+    </div>
+  </header>
+  <main>
+    <button class="btn-edit-toggle" id="toggle-dossier-edit" type="button" aria-pressed="false" hidden><i class="fa-solid fa-pen" aria-hidden="true"></i> Modifier les dossiers</button>
+    <p class="eyebrow">Espace de consultation</p>
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-intro">Retrouvez les dossiers du Site 11 et suivez leur état en un coup d’œil.</p>
+    <div class="stats-grid" aria-label="Résumé des dossiers">
+      <article class="stat-card"><span class="stat-label">Dossiers enregistrés</span><strong class="stat-value" id="stat-total">—</strong><span class="stat-caption">Visibles selon votre accès</span></article>
+      <article class="stat-card"><span class="stat-label">Surveillance active</span><strong class="stat-value" id="stat-active">—</strong><span class="stat-caption">Dossiers à suivre</span></article>
+      <article class="stat-card"><span class="stat-label">Niveaux d’accès</span><strong class="stat-value" id="stat-levels">—</strong><span class="stat-caption">Niveaux représentés</span></article>
+    </div>
+    <section class="panel">
+      <div class="panel-header">
+        <div><p class="eyebrow">Dossiers autorisés pour votre niveau</p><h2 class="panel-title"><i class="fa-solid fa-folder-open" aria-hidden="true"></i> Dossiers</h2></div>
+        <button class="btn-add" id="open-modal" type="button" hidden><i class="fa-solid fa-plus" aria-hidden="true"></i> Nouveau dossier</button>
+      </div>
+      <p class="form-feedback" id="dashboard-feedback" role="status" aria-live="polite"></p>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>CODE</th><th>SUJET</th><th>NIVEAU</th><th>STATUT</th><th id="table-actions-heading" hidden>ACTIONS</th></tr></thead>
+          <tbody id="dossiers-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+    <p class="notice"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Les dossiers sont filtrés selon le niveau d’accès de votre compte. Les visiteurs non connectés ne voient que les dossiers de niveau 1.</p>
+  </main>
+  <footer class="site-footer">Agence de renseignement — Site 11 · Portail de démonstration</footer>
+
+  <div class="modal" id="add-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-content">
+      <div class="panel-header"><h2 id="modal-title">Créer un dossier</h2><button class="icon-button" id="close-modal" type="button" aria-label="Fermer">×</button></div>
+      <form id="dossier-form">
+        <div class="form-group"><label for="form-code">Code dossier (attribué automatiquement)</label><input class="form-control" id="form-code" disabled></div>
+        <div class="form-group"><label for="form-sujet">Sujet</label><input class="form-control" id="form-sujet" required></div>
+        <div class="form-group"><label for="form-niveau">Niveau d’accès</label><select class="form-control" id="form-niveau"><option value="Niveau 1">Niveau 1</option><option value="Niveau 2">Niveau 2</option><option value="Niveau 3">Niveau 3</option><option value="Niveau 4">Niveau 4</option><option value="Niveau 5">Niveau 5</option></select></div>
+        <div class="form-group"><label for="form-statut">Statut</label><select class="form-control" id="form-statut" required><option>Classified</option><option>Fini de traitement</option><option>En cours de traitement</option><option selected>En attente de traitement</option></select><small class="form-hint">Le statut Classified impose automatiquement le niveau 5.</small></div>
+        <p class="form-feedback" id="dossier-feedback" role="status" aria-live="polite"></p>
+        <div class="modal-actions"><button class="btn-logout" id="cancel-modal" type="button">Annuler</button><button class="btn-add" type="submit">Enregistrer</button></div>
+      </form>
+    </div>
+  </div>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>

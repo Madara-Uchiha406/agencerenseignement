@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0d14">
+  <meta name="description" content="Gestion des comptes agents du Site 11.">
+  <title>Comptes agents — Agence de renseignement, Site 11</title>
+  <link rel="stylesheet" href="agents.css">
+  <link rel="stylesheet" href="chat-widget.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Orbitron:wght@500;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Agence de renseignement, accueil">
+      <i class="fa-solid fa-shield-halved brand-icon" aria-hidden="true"></i>
+      <span><strong>AGENCE DE RENSEIGNEMENT</strong><small>SITE 11 — PORTAIL OFFICIEL</small></span>
+    </a>
+    <nav class="site-nav" aria-label="Navigation principale">
+      <a href="dashboard.html"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> Dashboard</a>
+      <a href="contact.html"><i class="fa-regular fa-envelope" aria-hidden="true"></i> Contact</a>
+      <a href="index.html"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Informations</a>
+      <a href="messages.html" data-message-link hidden><i class="fa-regular fa-comments" aria-hidden="true"></i> Messages</a>
+      <a class="active" href="agents.html" data-agent-link="agents" aria-current="page"><i class="fa-solid fa-users-gear" aria-hidden="true"></i> Comptes</a>
+      <a href="journal.html" data-audit-link hidden><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Journal</a>
+    </nav>
+    <div class="header-actions">
+      <div class="user-badge" id="user-badge" hidden><span class="status-dot"></span></div>
+      <a class="btn-primary" id="login-link" href="connexion.html"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Connexion</a>
+      <button class="btn-logout" id="logout-button" type="button" hidden><i class="fa-solid fa-power-off" aria-hidden="true"></i> Déconnexion</button>
+    </div>
+  </header>
+  <main>
+    <p class="eyebrow">Administration · Niveau 5</p>
+    <div class="title-row"><div><h1 class="page-title">Comptes agents</h1><p class="page-intro">Créez, modifiez, désactivez ou supprimez les comptes du Site 11 selon votre niveau d’accès.</p></div><button class="btn-primary" id="open-agent-modal" type="button"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Créer un compte</button></div>
+    <p class="notice"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Réservé au compte officiel et aux agents actifs de niveau 5. Les autres responsables ne peuvent gérer que des comptes de niveau inférieur, jamais leur propre compte ni un compte de même niveau. Le compte officiel est exempté de cette règle. Les mots de passe sont gérés par Supabase Auth et ne sont jamais affichés ici.</p>
+    <section class="panel maintenance-panel" id="maintenance-panel" hidden>
+      <div class="panel-header"><div><p class="eyebrow">Superadmin uniquement</p><h2 class="panel-title">Maintenance du site</h2></div></div>
+      <p class="page-intro">Bloquez l’accès public à tout le site ou à des pages sélectionnées. Le superadmin conserve l’accès pour gérer la maintenance.</p>
+      <p class="form-feedback" id="maintenance-feedback" role="status" aria-live="polite"></p>
+      <div id="maintenance-controls" class="maintenance-controls"></div>
+    </section>
+    <section class="panel">
+      <p class="form-feedback" id="agents-feedback" role="status" aria-live="polite"></p>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>AGENT</th><th>E-MAIL</th><th>NIVEAU</th><th>ÉTAT</th><th>ACTIONS</th></tr></thead>
+        <tbody id="agents-table-body"></tbody>
+      </table></div>
+    </section>
+  </main>
+  <footer class="site-footer">Agence de renseignement — Site 11 · Gestion des accès</footer>
+  <div class="modal" id="agent-modal" role="dialog" aria-modal="true" aria-labelledby="agent-modal-title">
+    <div class="modal-content">
+      <div class="panel-header"><h2 id="agent-modal-title">Créer un compte</h2><button class="icon-button" id="close-agent-modal" type="button" aria-label="Fermer">×</button></div>
+      <form id="agent-form">
+        <input id="agent-id" type="hidden">
+        <div class="form-group"><label for="agent-name">Nom complet</label><input class="form-control" id="agent-name" required minlength="2" maxlength="100" autocomplete="name"></div>
+        <div class="form-group"><label for="agent-email">Adresse e-mail</label><input class="form-control" id="agent-email" type="email" required maxlength="254" autocomplete="email"></div>
+        <div class="form-group"><label for="agent-password">Mot de passe</label><input class="form-control" id="agent-password" type="password" minlength="12" maxlength="128" autocomplete="new-password"><small class="form-hint">12 caractères minimum. En modification, laissez vide pour le conserver.</small></div>
+        <div class="form-group"><label for="agent-level">Niveau d’accès</label><select class="form-control" id="agent-level"><option value="1">Niveau 1</option><option value="2">Niveau 2</option><option value="3">Niveau 3</option><option value="4">Niveau 4</option><option value="5">Niveau 5</option></select></div>
+        <label class="check-row"><input id="agent-active" type="checkbox" checked> Compte actif</label>
+        <p class="form-feedback" id="agent-form-feedback" role="status" aria-live="polite"></p>
+        <div class="modal-actions"><button class="btn-logout" id="cancel-agent-modal" type="button">Annuler</button><button class="btn-primary" type="submit">Enregistrer</button></div>
+      </form>
+    </div>
+  </div>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>

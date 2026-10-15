@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0d14">
+  <meta name="description" content="Connexion au portail de l'Agence de renseignement — Site 11.">
+  <title>Connexion — Agence de renseignement, Site 11</title>
+  <link rel="stylesheet" href="connexion.css">
+  <link rel="stylesheet" href="chat-widget.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Orbitron:wght@500;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Agence de renseignement, accueil">
+      <i class="fa-solid fa-shield-halved brand-icon" aria-hidden="true"></i>
+      <span><strong>AGENCE DE RENSEIGNEMENT</strong><small>SITE 11 — PORTAIL OFFICIEL</small></span>
+    </a>
+    <nav class="site-nav" aria-label="Navigation principale">
+      <a href="dashboard.html"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> Dashboard</a>
+      <a href="contact.html"><i class="fa-regular fa-envelope" aria-hidden="true"></i> Contact</a>
+      <a href="index.html"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Informations</a>
+      <a href="messages.html" data-message-link hidden><i class="fa-regular fa-comments" aria-hidden="true"></i> Messages</a>
+      <a href="agents.html" data-agent-link="agents" hidden><i class="fa-solid fa-users-gear" aria-hidden="true"></i> Comptes</a>
+      <a href="journal.html" data-audit-link hidden><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Journal</a>
+    </nav>
+    <div class="header-actions">
+      <div class="user-badge" id="user-badge" hidden><span class="status-dot"></span> SESSION AGENT</div>
+      <a class="btn-primary" id="login-link" href="connexion.html" aria-current="page"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Connexion</a>
+      <button class="btn-logout" id="logout-button" type="button" hidden><i class="fa-solid fa-power-off" aria-hidden="true"></i> Déconnexion</button>
+    </div>
+  </header>
+  <main class="login-main">
+    <section class="login-panel">
+      <div class="login-mark"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i></div>
+      <p class="eyebrow">Accès réservé</p>
+      <h1 class="page-title">Connexion agent</h1>
+      <p class="page-intro">Connectez-vous avec le compte agent créé par un administrateur pour accéder aux dossiers correspondant à votre niveau.</p>
+      <form id="login-form">
+        <div class="form-group"><label for="login-email">Adresse e-mail</label><input class="form-control" id="login-email" name="email" type="email" autocomplete="username" required autofocus></div>
+        <div class="form-group"><label for="login-password">Mot de passe</label><input class="form-control" id="login-password" name="password" type="password" autocomplete="current-password" required></div>
+        <button class="btn-primary login-submit" type="submit"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Se connecter</button>
+        <p class="form-feedback" id="login-feedback" role="status" aria-live="polite"></p>
+      </form>
+      <p class="notice"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Les comptes sont gérés par les administrateurs de niveau 5. Aucun compte public ne peut s’inscrire.</p>
+      <a class="back-link" href="index.html"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Retour aux informations</a>
+    </section>
+  </main>
+  <footer class="site-footer">Agence de renseignement — Site 11 · Portail de démonstration</footer>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0d14">
+  <meta name="description" content="Boîte de réception des conversations visiteurs du Site 11.">
+  <title>Messages — Agence de renseignement, Site 11</title>
+  <link rel="stylesheet" href="messages.css">
+  <link rel="stylesheet" href="chat-widget.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Orbitron:wght@500;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Agence de renseignement, accueil"><i class="fa-solid fa-shield-halved brand-icon" aria-hidden="true"></i><span><strong>AGENCE DE RENSEIGNEMENT</strong><small>SITE 11 — PORTAIL OFFICIEL</small></span></a>
+    <nav class="site-nav" aria-label="Navigation principale">
+      <a href="dashboard.html"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> Dashboard</a>
+      <a href="contact.html"><i class="fa-regular fa-comments" aria-hidden="true"></i> Contact</a>
+      <a href="index.html"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Informations</a>
+      <a href="messages.html" class="active" data-message-link aria-current="page" hidden><i class="fa-regular fa-comments" aria-hidden="true"></i> Messages</a>
+      <a href="agents.html" data-agent-link="agents" hidden><i class="fa-solid fa-users-gear" aria-hidden="true"></i> Comptes</a>
+      <a href="journal.html" data-audit-link hidden><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Journal</a>
+    </nav>
+    <div class="header-actions"><div class="user-badge" id="user-badge" hidden></div><a class="btn-primary" id="login-link" href="connexion.html">Connexion</a><button class="btn-logout" id="logout-button" type="button" hidden>Déconnexion</button></div>
+  </header>
+  <main>
+    <p class="eyebrow">Service visiteurs · Agents</p>
+    <h1 class="page-title">Messages</h1>
+    <p class="page-intro">Consultez les conversations, répondez aux visiteurs et mettez à jour leur état de traitement.</p>
+    <p class="form-feedback" id="messages-feedback" role="status" aria-live="polite"></p>
+    <section class="inbox" aria-label="Boîte de réception">
+      <aside class="inbox-sidebar"><h2>Conversations</h2><div class="inbox-list" id="messages-conversation-list"></div></aside>
+      <section class="inbox-detail" id="messages-detail" hidden>
+        <header class="inbox-detail-header"><div><span class="eyebrow">Conversation</span><h2 id="messages-current-name"></h2></div><div class="inbox-controls"><label class="visually-hidden" for="messages-status">Statut</label><select id="messages-status" aria-label="Statut de la conversation"><option value="waiting">En attente</option><option value="in_progress">En cours</option><option value="treated">Traité</option></select><button class="btn-delete-chat" id="messages-delete" type="button" hidden><i class="fa-regular fa-trash-can" aria-hidden="true"></i> Supprimer</button></div></header>
+        <div class="inbox-thread chat-thread" id="messages-thread" aria-live="polite"></div>
+        <form class="inbox-reply chat-reply-form" id="messages-reply-form"><label class="visually-hidden" for="messages-reply">Réponse au visiteur</label><textarea id="messages-reply" maxlength="4000" required placeholder="Écrire une réponse…"></textarea><button class="btn-primary" type="submit"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Répondre</button></form>
+      </section>
+      <div class="inbox-empty" id="messages-empty"><i class="fa-regular fa-comments" aria-hidden="true"></i><p>Sélectionnez une conversation pour afficher les messages.</p></div>
+    </section>
+  </main>
+  <footer class="site-footer">Agence de renseignement — Site 11 · Messagerie visiteurs</footer>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
