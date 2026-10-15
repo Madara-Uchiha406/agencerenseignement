@@ -41,3 +41,4 @@
 .chat-new-view textarea{min-height:130px}
 .chat-new-view .chat-send-first{margin-top:auto}
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.chat-panel[hidden],.chat-list-view[hidden],.chat-detail-view[hidden],.chat-new-view[hidden]{display:none!important}
