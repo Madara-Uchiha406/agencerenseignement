@@ -27,6 +27,13 @@ main{width:min(1060px,calc(100% - 2rem));min-height:calc(100vh - 190px);margin:0
 .info-card p,.contact-cta p{margin:0;color:var(--muted);font-size:.91rem;line-height:1.75}
 .text-link{display:inline-flex;gap:.45rem;align-items:center;margin-top:1rem;color:var(--cyan);font-size:.85rem;text-decoration:none}
 .text-link:hover{text-decoration:underline}
+.status-card{display:flex;align-items:center;gap:1rem;margin-top:1.25rem;padding:1.1rem 1.4rem;color:inherit;background:rgba(18,24,36,.88);border:1px solid var(--border);border-radius:10px;text-decoration:none;transition:.2s}
+.status-card:hover{border-color:rgba(0,240,255,.5);background:rgba(0,240,255,.045)}
+.status-card-icon{display:grid;width:2.6rem;height:2.6rem;flex:none;place-items:center;color:var(--cyan);background:rgba(0,240,255,.08);border-radius:8px}
+.status-card>span:nth-child(2){display:grid;gap:.3rem}
+.status-card strong{font:600 .95rem var(--title)}
+.status-card small{color:var(--muted);font-size:.82rem;line-height:1.5}
+.status-card-arrow{margin-left:auto;color:var(--cyan)}
 .contact-cta{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;margin-top:1.25rem;padding:1.5rem;background:rgba(0,240,255,.045);border:1px solid rgba(0,240,255,.2);border-radius:10px}
 .contact-cta h2{margin:0 0 .5rem;font:600 1.05rem var(--title)}
 .site-footer{padding:1.5rem 1rem;color:var(--muted);border-top:1px solid var(--border);text-align:center;font-size:.75rem}
