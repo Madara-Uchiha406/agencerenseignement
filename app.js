@@ -1,6 +1,7 @@
 let supabaseClient = null;
 let currentUser = null;
 let currentAgent = null;
+let visitorSessionPromise = null;
 let editingDossierId = null;
 let dossierEditMode = false;
 
@@ -28,7 +29,15 @@ function getSupabase() {
   if (!window.supabase || !AR_CONFIG.supabaseUrl || !AR_CONFIG.supabaseAnonKey) {
     throw new Error("Supabase n’est pas configuré. Ajoutez l’URL du projet et la clé publique dans config.js.");
   }
-  supabaseClient = window.supabase.createClient(AR_CONFIG.supabaseUrl, AR_CONFIG.supabaseAnonKey);
+  const projectRef = new URL(AR_CONFIG.supabaseUrl).hostname.split(".")[0];
+  supabaseClient = window.supabase.createClient(AR_CONFIG.supabaseUrl, AR_CONFIG.supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      storageKey: `sb-${projectRef}-auth-token`
+    }
+  });
   return supabaseClient;
 }
 
@@ -489,26 +498,42 @@ function statusLabel(status) {
   })[status] ?? status;
 }
 
-async function ensureVisitorSession() {
+async function ensureVisitorSession(createIfMissing = true) {
   const client = getSupabase();
-  const { data, error } = await client.auth.getSession();
-  if (error) throw error;
-  if (data.session?.user?.is_anonymous) {
-    currentUser = data.session.user;
+  const getOrCreateSession = async () => {
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    if (data.session?.user?.is_anonymous) {
+      currentUser = data.session.user;
+      return currentUser;
+    }
+    if (data.session?.user && !data.session.user.is_anonymous) {
+      await loadCurrentAgent();
+      if (currentAgent) throw new Error("La messagerie visiteur est disponible hors connexion. Consultez la page Messages pour répondre aux visiteurs.");
+      await client.auth.signOut();
+    }
+    if (!createIfMissing) {
+      currentUser = null;
+      return null;
+    }
+    const { data: anonymousData, error: anonymousError } = await client.auth.signInAnonymously();
+    if (anonymousError) {
+      throw new Error("La messagerie visiteur n’est pas activée. Activez Anonymous Sign-Ins dans Supabase Authentication > Sign In / Providers.");
+    }
+    currentUser = anonymousData.user;
+    currentAgent = null;
     return currentUser;
+  };
+
+  const projectRef = new URL(AR_CONFIG.supabaseUrl).hostname.split(".")[0];
+  if (navigator.locks?.request) {
+    return navigator.locks.request(`site11-visitor-session-${projectRef}`, getOrCreateSession);
   }
-  if (data.session?.user && !data.session.user.is_anonymous) {
-    await loadCurrentAgent();
-    if (currentAgent) throw new Error("La messagerie visiteur est disponible hors connexion. Consultez la page Messages pour répondre aux visiteurs.");
-    await client.auth.signOut();
-  }
-  const { data: anonymousData, error: anonymousError } = await client.auth.signInAnonymously();
-  if (anonymousError) {
-    throw new Error("La messagerie visiteur n’est pas activée. Activez Anonymous Sign-Ins dans Supabase Authentication > Sign In / Providers.");
-  }
-  currentUser = anonymousData.user;
-  currentAgent = null;
-  return currentUser;
+  if (visitorSessionPromise) return visitorSessionPromise;
+  visitorSessionPromise = getOrCreateSession().finally(() => {
+    visitorSessionPromise = null;
+  });
+  return visitorSessionPromise;
 }
 
 function renderChatMessageList(container, messages, agentView) {
@@ -558,6 +583,7 @@ async function fetchConversationMessages(conversationId) {
 }
 
 async function startVisitorConversation(name, body) {
+  await ensureVisitorSession();
   const { data, error } = await getSupabase().rpc("create_visitor_conversation", {
     p_visitor_name: name,
     p_initial_message: body
@@ -756,8 +782,16 @@ async function initializeChatWidget() {
     detailView.hidden = true;
     newView.hidden = true;
     try {
-      await ensureVisitorSession();
+      const visitor = await ensureVisitorSession(false);
       setChatError(null);
+      if (!visitor) {
+        list.replaceChildren();
+        const empty = document.createElement("p");
+        empty.className = "chat-empty";
+        empty.textContent = "Aucune conversation sur ce navigateur. Une session anonyme sera créée uniquement lors de l’envoi de votre premier message.";
+        list.appendChild(empty);
+        return;
+      }
       const conversations = await fetchVisitorConversations();
       list.replaceChildren();
       if (!conversations.length) {
