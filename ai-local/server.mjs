@@ -37,9 +37,12 @@ const publicInformation = [
   "Messagerie : un visiteur peut contacter l’équipe depuis Contact ou la bulle Messagerie. Il doit conserver le même navigateur pour retrouver ses conversations.",
   "Les pièces jointes autorisées dans la messagerie sont les images JPG/PNG/WebP et les PDF de 10 Mo maximum.",
   "Les alertes agents peuvent signaler les nouveaux messages et les changements de dossiers pendant que le site est ouvert.",
+  "Les conversations visiteurs et leurs messages sont supprimés après 24 heures sans nouveau message ; un compte anonyme sans conversation active est supprimé après 12 heures.",
   "Maintenance : l’administration peut configurer une maintenance générale ou ciblée et définir une raison personnalisée. La page État du site affiche les informations publiques sur l’état des services.",
+  "Fonctions récemment ajoutées : recherche et filtres du Dashboard, compteurs par statut, indicateurs visuels, archivage/restauration, historique par dossier, export CSV/PDF pour les niveaux autorisés, pièces jointes limitées, alertes agents et envoi du formulaire Contact sans rechargement de page.",
+  "Assistant IA : cette bulle utilise localement Ollama et le modèle Qwen 2.5 7B. Le relais tourne sur le PC qui l’a démarré ; le site public ne peut pas utiliser à distance le modèle hébergé sur un autre PC.",
   "Créateur : le pseudo indiqué est misanthrope45. Invitation Discord officielle : https://discord.gg/eevSpR8nHW.",
-  "La charte publique de l’Agence de Renseignement est consultable ici : https://docs.google.com/document/d/1nsfiP6qqsed5CwKM3U4wb5mXT5itAcbr6dlmEH2UNjw/edit?usp=sharing. Elle décrit le rôle de l’agence, les responsabilités de ses membres, les audits et la protection des informations.",
+  "La charte publique de l’Agence de Renseignement est consultable ici : https://docs.google.com/document/d/1nsfiP6qqsed5CwKM3U4wb5mXT5itAcbr6dlmEH2UNjw/edit?usp=sharing. Elle décrit le rôle de l’agence et ses compétences, la coopération avec le Département de la Sécurité et les FIM, les audits et habilitations, les responsabilités des membres, les procédures disciplinaires validées par la Direction et la protection contre les fuites d’informations.",
   "Pour contacter l’équipe, utiliser la page Contact et sa messagerie. Aucune adresse e-mail de contact publique n’est indiquée ici.",
   "Règles publiques du portail : les visiteurs n’accèdent qu’aux dossiers des niveaux 0 et 1 ; les agents accèdent aux dossiers selon leur niveau ; Classified impose le niveau 5. Les conversations visiteurs se retrouvent avec le même navigateur. Les données privées des dossiers et de la messagerie ne sont pas publiques.",
   "Aucune donnée privée n’est disponible pour cet assistant : pas de sujets de dossiers, conversations, identifiants, comptes, raisons internes de maintenance, ni journaux."
@@ -205,7 +208,15 @@ async function answerWithOllama(messages, level) {
   }
   if (level < 5) return answerPublicQuestion(conversation.at(-1).content, conversation);
 
-  const systemMessage = "Tu es un assistant généraliste utile. Réponds dans la langue de l’utilisateur. Tu n’as aucun accès aux dossiers, aux messages privés, aux comptes ni aux données Supabase du Site 11. Ne prétends pas les consulter. Ne fournis pas de liens cliquables ; écris les noms et pseudos en texte simple.";
+  const systemMessage = [
+    "Tu es l’assistant du portail Site 11.",
+    "Tu peux répondre aux questions générales et tu dois aussi bien connaître les fonctionnalités publiques du site décrites dans le contexte ci-dessous.",
+    "Pour les questions sur le site, ses pages, ses fonctions ou ses nouveautés, base-toi sur ce contexte. Si un fait n’y figure pas, dis que tu ne le sais pas au lieu de l’inventer.",
+    "Tu n’as aucun accès aux dossiers, sujets de dossiers, conversations privées, comptes, raisons internes de maintenance ni journaux Supabase. Ne prétends jamais consulter ces données et ne laisse pas entendre que le niveau 5 donne à l’IA cet accès.",
+    "Tu peux fournir les URL publiques exactes de la charte et de l’invitation Discord quand elles sont pertinentes. N’invente pas d’autres URL.",
+    "La charte contient des passages fictifs concernant des armes et des sanctions violentes : ne donne pas de consignes opérationnelles ni de détails qui faciliteraient la violence ; oriente vers le document public ou la page Contact.",
+    "Réponds dans la langue de l’utilisateur, clairement et sans inventer."
+  ].join(" ") + `\n\nContexte public à jour du portail :\n${publicInformation}`;
 
   return callOllama(systemMessage, conversation);
 }
