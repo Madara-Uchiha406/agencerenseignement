@@ -1321,6 +1321,10 @@ async function initializeLocalAiWidget() {
   const history = [];
   const isLevelFive = Boolean(currentAgent?.is_active && currentAgent.access_level >= 5);
   const userLimit = isLevelFive ? 4000 : 1200;
+  const allowedAssistantLinks = [
+    "https://discord.gg/eevSpR8nHW",
+    "https://docs.google.com/document/d/1nsfiP6qqsed5CwKM3U4wb5mXT5itAcbr6dlmEH2UNjw/edit?usp=sharing"
+  ];
 
   input.maxLength = userLimit;
   input.placeholder = isLevelFive
@@ -1333,7 +1337,25 @@ async function initializeLocalAiWidget() {
   const addMessage = (role, content) => {
     const message = document.createElement("div");
     message.className = `local-ai-message ${role === "user" ? "from-user" : "from-assistant"}`;
-    message.textContent = content;
+    if (role === "user") {
+      message.textContent = content;
+    } else {
+      const linkPattern = /(https:\/\/discord\.gg\/eevSpR8nHW|https:\/\/docs\.google\.com\/document\/d\/1nsfiP6qqsed5CwKM3U4wb5mXT5itAcbr6dlmEH2UNjw\/edit\?usp=sharing|misanthrope45 sur Discord)/g;
+      let cursor = 0;
+      for (const match of content.matchAll(linkPattern)) {
+        message.appendChild(document.createTextNode(content.slice(cursor, match.index)));
+        const anchor = document.createElement("a");
+        anchor.href = match[0] === "misanthrope45 sur Discord"
+          ? allowedAssistantLinks[0]
+          : match[0];
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        anchor.textContent = match[0];
+        message.appendChild(anchor);
+        cursor = match.index + match[0].length;
+      }
+      message.appendChild(document.createTextNode(content.slice(cursor)));
+    }
     thread.appendChild(message);
     thread.scrollTop = thread.scrollHeight;
   };
