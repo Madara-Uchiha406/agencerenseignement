@@ -23,7 +23,7 @@ Portail français organisé en pages séparées, avec Supabase pour l’authenti
 
 ## Mise en place Supabase
 
-1. Le projet Supabase utilisé par le portail doit déjà avoir son schéma et sa messagerie installés. Dans le tableau de bord Supabase, ouvrez **SQL Editor** et exécutez `supabase/enhancements.sql` depuis ce dépôt. La migration ajoute le bucket privé des pièces jointes (10 Mo maximum, JPG/PNG/WebP/PDF), les règles d’accès, les colonnes d’archivage et active les changements Realtime pour les dossiers et messages. Elle ne supprime pas les données existantes.
+1. Le projet Supabase utilisé par le portail doit déjà avoir son schéma et sa messagerie installés. Dans le tableau de bord Supabase, ouvrez **SQL Editor** et exécutez (ou réexécutez) `supabase/enhancements.sql` depuis ce dépôt. La migration ajoute le bucket privé des pièces jointes (10 Mo maximum, JPG/PNG/WebP/PDF), les règles d’accès, les colonnes de présentation/archivage des dossiers et active les changements Realtime pour les dossiers et messages. Elle ne supprime pas les données existantes.
 2. Dans **Authentication > Providers / Sign In**, activez les connexions anonymes (**Anonymous Sign-Ins**) pour autoriser les visiteurs à ouvrir un chat sans compte. Gardez les inscriptions par e-mail désactivées ; les comptes agents sont créés depuis la page Comptes par un agent niveau 5.
 3. Dans **Authentication > Users**, créez puis confirmez l’utilisateur officiel `directionagencerenseignement@gmail.com`. Ne place pas son mot de passe dans Git, dans `config.js` ou dans un fichier SQL.
 4. Dans **SQL Editor**, exécutez `supabase/first-admin.sql` pour attribuer le niveau 5 et le rôle protégé d’administrateur officiel à ce compte Auth déjà créé. Si le compte existe déjà, réexécutez ce script après la migration.
@@ -35,7 +35,7 @@ Le niveau d’accès agent est compris entre 1 et 5. Les dossiers vont du niveau
 
 ## Dossiers
 
-Le Dashboard propose une recherche par code ou sujet, des filtres par niveau et statut, des compteurs par état, ainsi que des indicateurs visuels de priorité. Les agents de niveau 4 et 5 peuvent consulter l’historique par dossier, exporter les dossiers accessibles en CSV ou préparer une version imprimable à enregistrer en PDF. L’archivage/restauration est réservé aux niveaux 4 et 5 ; les dossiers archivés sont masqués aux visiteurs et consultables depuis le filtre d’archives.
+Le Dashboard présente chaque dossier dans une fiche avec sa description, son numéro, ses dates et les noms de création/modification ; la sélection rapide, le tri et les filtres facilitent la navigation. Une accréditation dépliable indique les niveaux autorisés. Le niveau 5 peut activer l’affichage anonyme de l’auteur ; son nom n’est alors plus exposé dans les données de dossier accessibles aux autres niveaux. L’historique détaillé n’est pas affiché sur le Dashboard ; les événements restent consultables dans le Journal par les niveaux autorisés. Les agents de niveau 4 et 5 peuvent exporter les dossiers accessibles en CSV ou préparer une version imprimable à enregistrer en PDF. L’archivage/restauration est réservé aux niveaux 4 et 5 ; les dossiers archivés sont masqués aux visiteurs et consultables avec la case d’archives.
 
 ## Messagerie
 

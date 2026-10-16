@@ -3,7 +3,106 @@
 
 alter table public.dossiers
   add column if not exists archived_at timestamptz,
-  add column if not exists archived_by uuid references auth.users (id) on delete set null;
+  add column if not exists archived_by uuid references auth.users (id) on delete set null,
+  add column if not exists description text not null default '',
+  add column if not exists updated_at timestamptz not null default now(),
+  add column if not exists created_by_name text,
+  add column if not exists updated_by_name text,
+  add column if not exists is_anonymous boolean not null default false;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'dossiers_description_length_check'
+      and conrelid = 'public.dossiers'::regclass
+  ) then
+    alter table public.dossiers
+      add constraint dossiers_description_length_check
+      check (char_length(description) <= 5000);
+  end if;
+end;
+$$;
+
+create table if not exists public.dossier_creator_private (
+  dossier_id text primary key,
+  creator_name text not null
+);
+alter table public.dossier_creator_private enable row level security;
+revoke all on public.dossier_creator_private from public, anon, authenticated;
+grant select on public.dossier_creator_private to authenticated;
+drop policy if exists "Only level 5 can view private dossier creators" on public.dossier_creator_private;
+create policy "Only level 5 can view private dossier creators"
+on public.dossier_creator_private for select to authenticated
+using (
+  (select public.agent_is_active())
+  and coalesce((select public.current_agent_level()), 0) >= 5
+);
+
+create or replace function public.set_dossier_presentation_metadata()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  actor_name text;
+  creator_name text;
+begin
+  select nullif(btrim(p.full_name), '') into actor_name
+  from public.agent_profiles as p
+  where p.id = (select auth.uid());
+  actor_name := coalesce(actor_name, 'Agent');
+
+  if tg_op = 'INSERT' then
+    if new.is_anonymous and (
+      not coalesce((select public.agent_is_active()), false)
+      or coalesce((select public.current_agent_level()), 0) < 5
+    ) then
+      raise exception 'Seuls les agents de niveau 5 peuvent publier un dossier anonymement.';
+    end if;
+    insert into public.dossier_creator_private (dossier_id, creator_name)
+    values (new.id::text, actor_name)
+    on conflict (dossier_id) do nothing;
+    new.created_by_name := case when new.is_anonymous then null else actor_name end;
+    new.updated_by_name := actor_name;
+    new.updated_at := coalesce(new.created_at, now());
+    return new;
+  end if;
+
+  if new.is_anonymous is distinct from old.is_anonymous and (
+    not coalesce((select public.agent_is_active()), false)
+    or coalesce((select public.current_agent_level()), 0) < 5
+  ) then
+    raise exception 'Seuls les agents de niveau 5 peuvent modifier l’anonymat d’un dossier.';
+  end if;
+
+  if not old.is_anonymous and old.created_by_name is not null then
+    insert into public.dossier_creator_private (dossier_id, creator_name)
+    values (old.id::text, old.created_by_name)
+    on conflict (dossier_id) do nothing;
+  end if;
+  if new.is_anonymous then
+    new.created_by_name := null;
+  elsif old.is_anonymous then
+    select p.creator_name into creator_name
+    from public.dossier_creator_private as p
+    where p.dossier_id = old.id::text;
+    new.created_by_name := creator_name;
+  else
+    new.created_by_name := old.created_by_name;
+  end if;
+  new.updated_at := now();
+  new.updated_by_name := actor_name;
+  return new;
+end;
+$$;
+
+drop trigger if exists dossiers_presentation_metadata on public.dossiers;
+create trigger dossiers_presentation_metadata
+before insert or update on public.dossiers
+for each row execute function public.set_dossier_presentation_metadata();
+revoke all on function public.set_dossier_presentation_metadata() from public, anon, authenticated;
 
 create index if not exists dossiers_archived_level_idx
   on public.dossiers (archived_at, niveau, created_at desc);

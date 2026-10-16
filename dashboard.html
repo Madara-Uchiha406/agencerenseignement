@@ -51,28 +51,25 @@
         <div class="panel-actions">
           <button class="btn-export" id="export-csv" type="button" hidden><i class="fa-solid fa-file-csv" aria-hidden="true"></i> Export CSV</button>
           <button class="btn-export" id="export-pdf" type="button" hidden><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Export PDF</button>
-          <button class="btn-export" id="toggle-archives" type="button" hidden><i class="fa-solid fa-box-archive" aria-hidden="true"></i> Afficher les archives</button>
           <button class="btn-add" id="open-modal" type="button" hidden><i class="fa-solid fa-plus" aria-hidden="true"></i> Nouveau dossier</button>
         </div>
       </div>
       <p class="form-feedback" id="dashboard-feedback" role="status" aria-live="polite"></p>
       <div class="dossier-filters" aria-label="Recherche et filtres des dossiers">
-        <label class="filter-search" for="dossier-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span class="visually-hidden">Rechercher un code ou un sujet</span><input id="dossier-search" type="search" placeholder="Rechercher par code ou sujet"></label>
+        <label class="filter-search" for="dossier-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span class="visually-hidden">Rechercher un code, sujet ou description</span><input id="dossier-search" type="search" placeholder="Rechercher un code, sujet ou description"></label>
         <label for="filter-level"><span class="visually-hidden">Filtrer par niveau</span><select class="form-control" id="filter-level"><option value="">Tous les niveaux</option><option value="0">Niveau 0</option><option value="1">Niveau 1</option><option value="2">Niveau 2</option><option value="3">Niveau 3</option><option value="4">Niveau 4</option><option value="5">Niveau 5</option></select></label>
         <label for="filter-status"><span class="visually-hidden">Filtrer par statut</span><select class="form-control" id="filter-status"><option value="">Tous les statuts</option><option>Classified</option><option>Fini de traitement</option><option>En cours de traitement</option><option>En attente de traitement</option></select></label>
       </div>
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead><tr><th>CODE</th><th>SUJET</th><th>NIVEAU</th><th>STATUT</th><th id="table-actions-heading" hidden>ACTIONS</th></tr></thead>
-          <tbody id="dossiers-table-body"></tbody>
-        </table>
-      </div>
-      <div class="modal" id="history-modal" role="dialog" aria-modal="true" aria-labelledby="history-title" hidden>
-        <div class="modal-content history-content">
-          <div class="panel-header"><h2 id="history-title">Historique du dossier</h2><button class="icon-button" id="close-history" type="button" aria-label="Fermer">×</button></div>
-          <p class="form-feedback" id="history-feedback" role="status" aria-live="polite"></p>
-          <ol class="dossier-history" id="dossier-history"></ol>
-        </div>
+      <div class="dossier-browser">
+        <aside class="dossier-sidebar" aria-label="Navigation des dossiers">
+          <label class="archive-switch" hidden><input id="show-archives" type="checkbox"><span class="switch" aria-hidden="true"></span><span>Afficher les dossiers archivés</span></label>
+          <label class="sidebar-field" for="dossier-sort"><span>Trier par</span><select class="form-control" id="dossier-sort"><option value="code">Numéro croissant</option><option value="code-desc">Numéro décroissant</option><option value="updated">Dernière modification</option><option value="created">Date de création</option><option value="subject">Sujet</option></select></label>
+          <label class="sidebar-field" for="dossier-quick-select"><span>Sélection rapide</span><select class="form-control" id="dossier-quick-select"><option value="">Chargement…</option></select></label>
+          <div class="dossier-list" id="dossier-list" aria-label="Liste des dossiers"></div>
+        </aside>
+        <article class="dossier-detail" id="dossier-detail" aria-live="polite">
+          <p class="empty-state">Chargement des dossiers…</p>
+        </article>
       </div>
     </section>
     <p class="notice"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Les dossiers sont filtrés selon le niveau d’accès de votre compte. Les visiteurs non connectés voient les dossiers de niveaux 0 et 1.</p>
@@ -85,6 +82,7 @@
       <form id="dossier-form">
         <div class="form-group"><label for="form-code">Code dossier (attribué automatiquement)</label><input class="form-control" id="form-code" disabled></div>
         <div class="form-group"><label for="form-sujet">Sujet</label><input class="form-control" id="form-sujet" required></div>
+        <div class="form-group"><label for="form-description">Description</label><textarea class="form-control description-control" id="form-description" rows="5" maxlength="5000" placeholder="Décrivez le dossier et les informations utiles à son suivi."></textarea></div>
         <div class="form-group"><label for="form-niveau">Niveau d’accès</label><select class="form-control" id="form-niveau"><option value="Niveau 0">Niveau 0</option><option value="Niveau 1">Niveau 1</option><option value="Niveau 2">Niveau 2</option><option value="Niveau 3">Niveau 3</option><option value="Niveau 4">Niveau 4</option><option value="Niveau 5">Niveau 5</option></select></div>
         <div class="form-group"><label for="form-statut">Statut</label><select class="form-control" id="form-statut" required><option>Classified</option><option>Fini de traitement</option><option>En cours de traitement</option><option selected>En attente de traitement</option></select><small class="form-hint">Le statut Classified impose automatiquement le niveau 5.</small></div>
         <p class="form-feedback" id="dossier-feedback" role="status" aria-live="polite"></p>

@@ -6,6 +6,7 @@ let editingDossierId = null;
 let dossierEditMode = false;
 let dossierCache = [];
 let showArchivedDossiers = false;
+let selectedDossierId = null;
 let agentNotificationsChannel = null;
 
 const DOSSIER_STATUSES = [
@@ -331,7 +332,7 @@ function updateDashboardStats(rows) {
 async function fetchDossiers() {
   let query = getSupabase()
     .from("dossiers")
-    .select("id, code, sujet, niveau, statut, created_at, archived_at")
+    .select("id, code, sujet, description, niveau, statut, created_at, updated_at, created_by_name, updated_by_name, is_anonymous, archived_at")
     .order("id", { ascending: false });
   query = showArchivedDossiers
     ? query.not("archived_at", "is", null)
@@ -350,76 +351,199 @@ function renderDossiers() {
   const level = document.getElementById("filter-level")?.value ?? "";
   const status = document.getElementById("filter-status")?.value ?? "";
   const rows = dossierCache.filter(dossier =>
-    (!search || dossier.code.toLocaleLowerCase("fr").includes(search) || dossier.sujet.toLocaleLowerCase("fr").includes(search)) &&
+    (!search || dossier.code.toLocaleLowerCase("fr").includes(search) || dossier.sujet.toLocaleLowerCase("fr").includes(search) || (dossier.description ?? "").toLocaleLowerCase("fr").includes(search)) &&
     (!level || String(dossier.niveau) === level) &&
     (!status || dossier.statut === status)
   );
-  const tbody = document.getElementById("dossiers-table-body");
-  tbody.replaceChildren();
+  const sortBy = document.getElementById("dossier-sort")?.value ?? "code";
+  rows.sort((left, right) => {
+    if (sortBy === "subject") return left.sujet.localeCompare(right.sujet, "fr");
+    if (sortBy === "created") return new Date(right.created_at) - new Date(left.created_at);
+    if (sortBy === "updated") return new Date(right.updated_at ?? right.created_at) - new Date(left.updated_at ?? left.created_at);
+    const leftNumber = Number(String(left.code).match(/\d+/)?.[0] ?? 0);
+    const rightNumber = Number(String(right.code).match(/\d+/)?.[0] ?? 0);
+    return sortBy === "code-desc" ? rightNumber - leftNumber : leftNumber - rightNumber;
+  });
 
-  if (!rows.length) {
-    const emptyRow = document.createElement("tr");
-    const emptyCell = createCell(dossierCache.length
+  const list = document.getElementById("dossier-list");
+  const quickSelect = document.getElementById("dossier-quick-select");
+  list.replaceChildren();
+  quickSelect.replaceChildren(new Option(rows.length ? "Choisir un dossier…" : "Aucun dossier", ""));
+
+  for (const dossier of rows) {
+    quickSelect.appendChild(new Option(`${dossier.code} — ${dossier.sujet}`, String(dossier.id)));
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "dossier-list-item";
+    item.setAttribute("aria-pressed", String(String(dossier.id) === String(selectedDossierId)));
+    const code = document.createElement("strong");
+    code.textContent = dossier.code;
+    const subject = document.createElement("span");
+    subject.textContent = dossier.sujet;
+    const badge = document.createElement("small");
+    badge.className = `list-status status-${DOSSIER_STATUSES.indexOf(dossier.statut)}`;
+    badge.textContent = dossier.statut;
+    item.append(code, subject, badge);
+    item.addEventListener("click", () => {
+      selectedDossierId = dossier.id;
+      renderDossiers();
+    });
+    list.appendChild(item);
+  }
+
+  if (!rows.some(dossier => String(dossier.id) === String(selectedDossierId))) {
+    selectedDossierId = rows[0]?.id ?? null;
+  }
+  quickSelect.value = selectedDossierId == null ? "" : String(selectedDossierId);
+  quickSelect.onchange = () => {
+    selectedDossierId = quickSelect.value || null;
+    renderDossiers();
+  };
+  renderDossierDetails(rows.find(dossier => String(dossier.id) === String(selectedDossierId)) ?? null, dossierCache.length > 0);
+}
+
+function renderDossierDetails(dossier, hasDossiers) {
+  const detail = document.getElementById("dossier-detail");
+  detail.replaceChildren();
+  if (!dossier) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = hasDossiers
       ? "Aucun dossier ne correspond à ces filtres."
       : currentUser
         ? "Aucun dossier accessible à votre niveau."
-        : "Aucun dossier public pour le moment.");
-    emptyCell.colSpan = dossierEditMode || currentAgent?.access_level >= 4 ? 5 : 4;
-    emptyCell.className = "empty-state";
-    emptyRow.appendChild(emptyCell);
-    tbody.appendChild(emptyRow);
+        : "Aucun dossier public pour le moment.";
+    detail.appendChild(empty);
     return;
   }
 
-  for (const dossier of rows) {
-    const row = document.createElement("tr");
-    row.classList.add(dossier.statut === "Classified" ? "priority-classified"
-      : dossier.statut === "En attente de traitement" ? "priority-waiting"
-        : dossier.statut === "En cours de traitement" ? "priority-progress" : "priority-finished");
-    row.appendChild(createCell(dossier.code, "code-text"));
-    row.appendChild(createCell(dossier.sujet));
-    const levelCell = document.createElement("td");
-    const badge = document.createElement("span");
-    badge.className = "badge";
-    badge.textContent = `Niveau ${dossier.niveau}`;
-    levelCell.appendChild(badge);
-    row.appendChild(levelCell);
-    const statusCell = createCell(dossier.statut, `status-cell status-${DOSSIER_STATUSES.indexOf(dossier.statut)}`);
-    row.appendChild(statusCell);
+  const header = document.createElement("div");
+  header.className = "dossier-detail-header";
+  const heading = document.createElement("div");
+  heading.className = "dossier-heading";
+  const subject = document.createElement("h3");
+  subject.textContent = dossier.sujet;
+  const code = document.createElement("span");
+  code.className = "code-text";
+  code.textContent = dossier.code;
+  heading.append(subject, code);
+  const meta = document.createElement("div");
+  meta.className = "dossier-main-meta";
+  const updated = document.createElement("span");
+  updated.innerHTML = '<i class="fa-regular fa-clock" aria-hidden="true"></i> Dernière modification';
+  const updatedTime = document.createElement("strong");
+  updatedTime.textContent = formatDossierDate(dossier.updated_at ?? dossier.created_at);
+  const status = document.createElement("span");
+  status.className = `dossier-status status-${DOSSIER_STATUSES.indexOf(dossier.statut)}`;
+  status.textContent = dossier.statut;
+  meta.append(updated, updatedTime, status);
+  header.append(heading, meta);
 
-    if (dossierEditMode || (currentAgent && currentAgent.access_level >= 4)) {
-      const actions = document.createElement("td");
-      if (dossierEditMode) {
-        const edit = document.createElement("button");
-        edit.className = "btn-edit";
-        edit.type = "button";
-        edit.setAttribute("aria-label", `Modifier le dossier ${dossier.code}`);
-        edit.innerHTML = '<i class="fa-solid fa-pen" aria-hidden="true"></i>';
-        edit.addEventListener("click", () => openDossierModal(dossier));
-        actions.appendChild(edit);
-        if (currentAgent && currentAgent.access_level >= 4) {
-          const archive = document.createElement("button");
-          archive.className = "btn-archive";
-          archive.type = "button";
-          archive.setAttribute("aria-label", `${showArchivedDossiers ? "Restaurer" : "Archiver"} le dossier ${dossier.code}`);
-          archive.title = showArchivedDossiers ? "Restaurer" : "Archiver";
-          archive.innerHTML = `<i class="fa-solid ${showArchivedDossiers ? "fa-box-open" : "fa-box-archive"}" aria-hidden="true"></i>`;
-          archive.addEventListener("click", () => archiveDossier(dossier, !showArchivedDossiers));
-          actions.appendChild(archive);
-        }
-      }
-      if (currentAgent && currentAgent.access_level >= 4) {
-        const history = document.createElement("button");
-        history.className = "btn-edit";
-        history.type = "button";
-        history.setAttribute("aria-label", `Afficher l’historique du dossier ${dossier.code}`);
-        history.innerHTML = '<i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>';
-        history.addEventListener("click", () => openDossierHistory(dossier));
-        actions.appendChild(history);
-      }
-      row.appendChild(actions);
-    }
-    tbody.appendChild(row);
+  const body = document.createElement("div");
+  body.className = "dossier-detail-body";
+  const description = document.createElement("section");
+  description.className = "dossier-description";
+  const descriptionLabel = document.createElement("h4");
+  descriptionLabel.textContent = "Description";
+  const descriptionText = document.createElement("p");
+  descriptionText.textContent = dossier.description?.trim() || "Aucune description renseignée.";
+  description.append(descriptionLabel, descriptionText);
+
+  const metadata = document.createElement("dl");
+  metadata.className = "dossier-metadata";
+  const addMetadata = (label, value) => {
+    const wrapper = document.createElement("div");
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const definition = document.createElement("dd");
+    definition.textContent = value;
+    wrapper.append(term, definition);
+    metadata.appendChild(wrapper);
+  };
+  addMetadata("Numéro de dossier", dossier.code);
+  addMetadata("Créé le", formatDossierDate(dossier.created_at));
+  addMetadata("Écrit par", dossier.is_anonymous ? "Anonyme" : dossier.created_by_name || "Non renseigné");
+  addMetadata("Dernière modification par", dossier.updated_by_name || "Non renseigné");
+  addMetadata("Niveau d’accès", `Niveau ${dossier.niveau}`);
+  const accreditation = document.createElement("details");
+  accreditation.className = "dossier-accreditation";
+  const accreditationSummary = document.createElement("summary");
+  accreditationSummary.textContent = "Accréditation";
+  const levels = document.createElement("p");
+  levels.textContent = `Dossier visible aux niveaux ${Array.from({ length: Number(dossier.niveau) + 1 }, (_, index) => index).join(", ")}.`;
+  accreditation.append(accreditationSummary, levels);
+  metadata.appendChild(accreditation);
+  body.append(description, metadata);
+
+  const footer = document.createElement("div");
+  footer.className = "dossier-detail-footer";
+  const actions = document.createElement("div");
+  actions.className = "dossier-detail-actions";
+  if (dossierEditMode) {
+    const edit = document.createElement("button");
+    edit.className = "btn-export";
+    edit.type = "button";
+    edit.innerHTML = '<i class="fa-solid fa-pen" aria-hidden="true"></i> Modifier';
+    edit.addEventListener("click", () => openDossierModal(dossier));
+    actions.appendChild(edit);
+  }
+  if (dossierEditMode && currentAgent?.access_level >= 4) {
+    const archive = document.createElement("button");
+    archive.className = "btn-export";
+    archive.type = "button";
+    archive.innerHTML = `<i class="fa-solid ${showArchivedDossiers ? "fa-box-open" : "fa-box-archive"}" aria-hidden="true"></i> ${showArchivedDossiers ? "Restaurer" : "Archiver"}`;
+    archive.addEventListener("click", () => archiveDossier(dossier, !showArchivedDossiers));
+    actions.appendChild(archive);
+  }
+  footer.appendChild(actions);
+
+  if (currentAgent?.access_level >= 5) {
+    const anonymousLabel = document.createElement("label");
+    anonymousLabel.className = "anonymous-toggle";
+    const anonymousInput = document.createElement("input");
+    anonymousInput.type = "checkbox";
+    anonymousInput.checked = Boolean(dossier.is_anonymous);
+    anonymousInput.addEventListener("change", () => updateDossierAnonymity(dossier, anonymousInput));
+    const toggle = document.createElement("span");
+    toggle.className = "switch";
+    const label = document.createElement("span");
+    label.textContent = "Anonyme";
+    anonymousLabel.append(anonymousInput, toggle, label);
+    footer.appendChild(anonymousLabel);
+  }
+  detail.append(header, body, footer);
+}
+
+function formatDossierDate(value) {
+  if (!value) return "Non renseignée";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Non renseignée" : date.toLocaleString("fr-FR");
+}
+
+async function updateDossierAnonymity(dossier, input) {
+  if (!currentAgent || currentAgent.access_level < 5) {
+    input.checked = Boolean(dossier.is_anonymous);
+    return;
+  }
+  const { data, error } = await getSupabase()
+    .from("dossiers")
+    .update({ is_anonymous: input.checked })
+    .eq("id", dossier.id)
+    .select("id");
+  if (error) {
+    input.checked = Boolean(dossier.is_anonymous);
+    setFeedback("dashboard-feedback", friendlyError(error));
+    return;
+  }
+  if (!data?.length) {
+    input.checked = Boolean(dossier.is_anonymous);
+    setFeedback("dashboard-feedback", "Le dossier n’a pas été modifié : accès insuffisant.");
+    return;
+  }
+  try {
+    await fetchDossiers();
+  } catch (error) {
+    setFeedback("dashboard-feedback", friendlyError(error));
   }
 }
 
@@ -433,6 +557,7 @@ function setDossierFormMode(dossier = null) {
   code.value = dossier?.code ?? "Attribué automatiquement";
   code.disabled = true;
   document.getElementById("form-sujet").value = dossier?.sujet ?? "";
+  document.getElementById("form-description").value = dossier?.description ?? "";
   level.value = dossier ? `Niveau ${dossier.niveau}` : `Niveau ${currentAgent?.access_level ?? 1}`;
   Array.from(level.options).forEach(option => {
     const optionLevel = Number(option.value.replace("Niveau ", ""));
@@ -468,6 +593,7 @@ async function handleDossierSubmit(event) {
   }
   const values = {
     sujet: document.getElementById("form-sujet").value.trim(),
+    description: document.getElementById("form-description").value.trim(),
     niveau: status === "Classified"
       ? 5
       : Number(document.getElementById("form-niveau").value.replace("Niveau ", "")),
@@ -487,6 +613,7 @@ async function handleDossierSubmit(event) {
     return;
   }
 
+  selectedDossierId = data[0].id;
   closeDossierModal();
   setFeedback("dashboard-feedback", "Dossier enregistré.", false);
   await fetchDossiers();
@@ -512,51 +639,16 @@ async function archiveDossier(dossier, archive) {
   await fetchDossiers();
 }
 
-async function openDossierHistory(dossier) {
-  const modal = document.getElementById("history-modal");
-  const list = document.getElementById("dossier-history");
-  document.getElementById("history-title").textContent = `Historique — ${dossier.code}`;
-  list.replaceChildren();
-  modal.hidden = false;
-  modal.classList.add("open");
-  setFeedback("history-feedback", "");
-  try {
-    const { data, error } = await getSupabase()
-      .from("activity_logs")
-      .select("actor_email, action, details, created_at")
-      .eq("target_type", "dossier")
-      .eq("target_id", String(dossier.id))
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    if (!data?.length) {
-      const empty = document.createElement("li");
-      empty.textContent = "Aucun changement enregistré.";
-      list.appendChild(empty);
-      return;
-    }
-    data.forEach(entry => {
-      const item = document.createElement("li");
-      const heading = document.createElement("strong");
-      heading.textContent = `${entry.actor_email} · ${new Date(entry.created_at).toLocaleString("fr-FR")}`;
-      const action = document.createElement("span");
-      action.textContent = entry.action.replaceAll("_", " ");
-      const details = document.createElement("pre");
-      details.textContent = JSON.stringify(entry.details, null, 2);
-      item.append(heading, action, details);
-      list.appendChild(item);
-    });
-    setFeedback("history-feedback", "");
-  } catch (error) {
-    setFeedback("history-feedback", friendlyError(error));
-  }
-}
-
 function exportDossiersCsv() {
   if (!currentAgent || currentAgent.access_level < 4) return;
   const records = dossierCache;
-  const fields = ["code", "sujet", "niveau", "statut", "created_at"];
+  const fields = ["code", "sujet", "description", "niveau", "statut", "created_at", "updated_at", "created_by_name", "updated_by_name"];
   const csvCell = value => `"${String(value ?? "").replaceAll('"', '""')}"`;
-  const csv = [fields.join(";"), ...records.map(row => fields.map(field => csvCell(field === "niveau" ? `Niveau ${row[field]}` : row[field])).join(";"))].join("\r\n");
+  const csv = [fields.join(";"), ...records.map(row => fields.map(field => {
+    if (field === "niveau") return csvCell(`Niveau ${row[field]}`);
+    if (field === "created_by_name" && row.is_anonymous) return csvCell("Anonyme");
+    return csvCell(row[field]);
+  }).join(";"))].join("\r\n");
   const url = URL.createObjectURL(new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = url;
@@ -576,9 +668,9 @@ function exportDossiersPdf() {
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   })[character]);
   const tableRows = dossierCache.map(row =>
-    `<tr><td>${escapeHtml(row.code)}</td><td>${escapeHtml(row.sujet)}</td><td>Niveau ${escapeHtml(row.niveau)}</td><td>${escapeHtml(row.statut)}</td></tr>`
+    `<tr><td>${escapeHtml(row.code)}</td><td>${escapeHtml(row.sujet)}</td><td>${escapeHtml(row.description)}</td><td>Niveau ${escapeHtml(row.niveau)}</td><td>${escapeHtml(row.statut)}</td><td>${escapeHtml(formatDossierDate(row.updated_at ?? row.created_at))}</td><td>${escapeHtml(row.is_anonymous ? "Anonyme" : row.created_by_name)}</td></tr>`
   ).join("");
-  printWindow.document.write(`<!doctype html><html lang="fr"><meta charset="utf-8"><title>Export des dossiers Site 11</title><style>body{font:14px Arial,sans-serif;margin:24px;color:#111}h1{font-size:20px}table{width:100%;border-collapse:collapse}th,td{padding:8px;border:1px solid #bbb;text-align:left}th{background:#eee}@media print{body{margin:0}}</style><h1>Export des dossiers — Site 11</h1><p>Exporté le ${escapeHtml(new Date().toLocaleString("fr-FR"))} · Niveau ${currentAgent.access_level}</p><table><thead><tr><th>Code</th><th>Sujet</th><th>Niveau</th><th>Statut</th></tr></thead><tbody>${tableRows}</tbody></table><script>window.onload=()=>window.print()</script></html>`);
+  printWindow.document.write(`<!doctype html><html lang="fr"><meta charset="utf-8"><title>Export des dossiers Site 11</title><style>body{font:14px Arial,sans-serif;margin:24px;color:#111}h1{font-size:20px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{padding:6px;border:1px solid #bbb;text-align:left;vertical-align:top}th{background:#eee}@media print{body{margin:0}}</style><h1>Export des dossiers — Site 11</h1><p>Exporté le ${escapeHtml(new Date().toLocaleString("fr-FR"))} · Niveau ${currentAgent.access_level}</p><table><thead><tr><th>Code</th><th>Sujet</th><th>Description</th><th>Niveau</th><th>Statut</th><th>Dernière modification</th><th>Écrit par</th></tr></thead><tbody>${tableRows}</tbody></table><script>window.onload=()=>window.print()</script></html>`);
   printWindow.document.close();
   setFeedback("dashboard-feedback", "Dans la fenêtre d’impression, choisissez « Enregistrer au format PDF ».", false);
 }
@@ -594,8 +686,6 @@ function setDossierEditMode(enabled) {
   }
   const addButton = document.getElementById("open-modal");
   if (addButton) addButton.hidden = !enabled;
-  const actionsHeading = document.getElementById("table-actions-heading");
-  if (actionsHeading) actionsHeading.hidden = !enabled && !(currentAgent?.access_level >= 4);
   renderDossiers();
 }
 
@@ -1604,7 +1694,7 @@ async function initializeDashboard() {
   if (addButton) addButton.addEventListener("click", () => openDossierModal());
   const exportCsv = document.getElementById("export-csv");
   const exportPdf = document.getElementById("export-pdf");
-  const archiveToggle = document.getElementById("toggle-archives");
+  const archiveToggle = document.getElementById("show-archives");
   const privileged = Boolean(currentAgent && currentAgent.access_level >= 4);
   if (exportCsv) {
     exportCsv.hidden = !privileged;
@@ -1615,27 +1705,16 @@ async function initializeDashboard() {
     exportPdf.addEventListener("click", exportDossiersPdf);
   }
   if (archiveToggle) {
-    archiveToggle.hidden = !privileged;
-    archiveToggle.addEventListener("click", async () => {
-      showArchivedDossiers = !showArchivedDossiers;
-      archiveToggle.innerHTML = `<i class="fa-solid ${showArchivedDossiers ? "fa-box-open" : "fa-box-archive"}" aria-hidden="true"></i> ${showArchivedDossiers ? "Afficher les dossiers actifs" : "Afficher les archives"}`;
+    archiveToggle.closest("label").hidden = !privileged;
+    archiveToggle.addEventListener("change", async () => {
+      showArchivedDossiers = archiveToggle.checked;
       await fetchDossiers().catch(error => setFeedback("dashboard-feedback", friendlyError(error)));
     });
   }
   document.getElementById("dossier-search").addEventListener("input", renderDossiers);
   document.getElementById("filter-level").addEventListener("change", renderDossiers);
   document.getElementById("filter-status").addEventListener("change", renderDossiers);
-  document.getElementById("close-history").addEventListener("click", () => {
-    const historyModal = document.getElementById("history-modal");
-    historyModal.hidden = true;
-    historyModal.classList.remove("open");
-  });
-  document.getElementById("history-modal").addEventListener("click", event => {
-    if (event.target.id === "history-modal") {
-      event.currentTarget.hidden = true;
-      event.currentTarget.classList.remove("open");
-    }
-  });
+  document.getElementById("dossier-sort").addEventListener("change", renderDossiers);
   const form = document.getElementById("dossier-form");
   if (form) form.addEventListener("submit", handleDossierSubmit);
   const closeButton = document.getElementById("close-modal");
@@ -1661,15 +1740,9 @@ async function initializeDashboard() {
       if (event.target === modal) closeDossierModal();
     });
     document.addEventListener("keydown", event => {
-      if (event.key === "Escape") {
-        closeDossierModal();
-        const historyModal = document.getElementById("history-modal");
-        historyModal.hidden = true;
-        historyModal.classList.remove("open");
-      }
+      if (event.key === "Escape") closeDossierModal();
     });
   }
-  document.getElementById("table-actions-heading").hidden = !privileged;
   await fetchDossiers();
 }
 
@@ -1723,7 +1796,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!AR_CONFIG.supabaseUrl || !AR_CONFIG.supabaseAnonKey) {
     const message = "Configurez l’URL Supabase et la clé publique dans config.js.";
     if (loginForm) setFeedback("login-feedback", message);
-    if (document.getElementById("dossiers-table-body")) setFeedback("dashboard-feedback", message);
+    if (document.getElementById("dossier-detail")) setFeedback("dashboard-feedback", message);
     if (document.getElementById("agents-table-body")) setFeedback("agents-feedback", message);
     if (document.getElementById("activity-table-body")) setFeedback("activity-feedback", message);
     await initializeChatWidget();
@@ -1741,7 +1814,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       showMaintenanceCheckWarning(maintenanceError);
     }
 
-    if (document.getElementById("dossiers-table-body")) await initializeDashboard();
+    if (document.getElementById("dossier-detail")) await initializeDashboard();
     else if (document.getElementById("agents-table-body")) await initializeAgentsPage();
     else if (document.getElementById("activity-table-body")) await initializeActivityPage();
     else if (document.getElementById("messages-conversation-list")) await initializeMessagesPage();
