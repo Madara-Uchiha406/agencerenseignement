@@ -40,10 +40,11 @@ const publicInformation = [
   "Maintenance : l’administration peut configurer une maintenance générale ou ciblée et définir une raison personnalisée. La page État du site affiche les informations publiques sur l’état des services.",
   "Créateur : le pseudo indiqué est misanthrope45 sur Discord.",
   "Pour contacter l’équipe, utiliser la page Contact et sa messagerie. Aucune adresse e-mail de contact publique n’est indiquée ici.",
+  "Charte et règles publiques : les visiteurs n’accèdent qu’aux dossiers des niveaux 0 et 1 ; les agents accèdent aux dossiers selon leur niveau ; Classified impose le niveau 5. Les conversations visiteurs se retrouvent avec le même navigateur. Les données privées des dossiers et de la messagerie ne sont pas publiques.",
   "Aucune donnée privée n’est disponible pour cet assistant : pas de sujets de dossiers, conversations, identifiants, comptes, raisons internes de maintenance, ni journaux."
 ].join("\n");
 
-const publicTopic = /\b(missions?|objectifs?|but|sert|site|portail|agence|informations?|pages?|dashboard|tableau|dossiers?|niveaux?|acces|classified|statuts?|traitement|contact|email|courriel|messagerie|conversations?|messages?|reponses?|repondre|comptes?|agents?|connexion|connecter|maintenance|etat|services?|archives?|exports?|historiques?|journal|audit|notifications?|alertes?|pieces? jointes?|fichiers?|mobile|telephone|securite|confidentialite|anonyme|visiteur|createur|creatrice|create|fondateur|discord|misanthrope45|utilite|fonctions?|fonctionne|fonctionnalites?|propose|offre)\b/i;
+const publicTopic = /\b(missions?|objectifs?|but|sert|site|portail|agence|informations?|pages?|dashboard|tableau|dossiers?|niveaux?|acces|classified|statuts?|traitement|contact|email|courriel|messagerie|conversations?|messages?|reponses?|repondre|comptes?|agents?|connexion|connecter|maintenance|etat|services?|archives?|exports?|historiques?|journal|audit|notifications?|alertes?|pieces? jointes?|fichiers?|mobile|telephone|securite|confidentialite|anonyme|visiteur|createur|creatrice|create|fondateur|discord|misanthrope45|charte|regle|regles|utilite|fonctions?|fonctionne|fonctionnalites?|propose|offre)\b/i;
 
 const publicOffTopic = /\b(math(?:ematiques)?|calcul(?:e|er|s)?|addition|soustraction|multiplication|division|pi|meteo|temperature|recette|blague|jeu|musique|film|sport|actualite|heure|date du jour|ordinateur|programme actuellement|ton nom|qui es tu|raconte|poeme|traduction|traduis|combien font)\b|\b\d+\s*[+*/-]\s*\d+\b/i;
 
@@ -164,10 +165,16 @@ function validateMessages(messages, maxUserLength) {
 
 async function answerPublicQuestion(question, conversation = []) {
   const normalized = question.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/\b(discord|misanthrope45)\b/.test(normalized)) {
+    return "Le pseudo Discord du créateur est misanthrope45.";
+  }
   if (publicOffTopic.test(normalized)) {
     return "Je peux uniquement répondre aux questions sur les informations publiques de ce site. Je ne réponds pas aux questions générales, aux calculs ou aux sujets quotidiens.";
   }
-  if (/\b(misanthrope45|createur|creatrice|fondateur|fondatrice|auteur|autrice|developpeur|developpeuse)\b/.test(normalized)) {
+  if (/\b(charte|regle|regles)\b/.test(normalized)) {
+    return "Le site ne présente pas de charte séparée. Ses règles publiques indiquent que les visiteurs voient les dossiers de niveaux 0 et 1, que l’accès des agents dépend de leur niveau et que Classified impose le niveau 5. Les visiteurs doivent garder le même navigateur pour retrouver leurs conversations. Les dossiers et messages privés ne sont pas publics.";
+  }
+  if (/\b(createur|creatrice|fondateur|fondatrice|auteur|autrice|developpeur|developpeuse)\b/.test(normalized)) {
     return "Le créateur du site est misanthrope45 sur Discord.";
   }
   if (!publicTopic.test(normalized)) {
