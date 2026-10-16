@@ -7,7 +7,7 @@
   <meta name="description" content="Tableau de bord des dossiers du Site 11.">
   <title>Dashboard — Agence de renseignement, Site 11</title>
   <link rel="stylesheet" href="dashboard.css">
-  <link rel="stylesheet" href="chat-widget.css">
+  <link rel="stylesheet" href="chat-widget.css?v=20261016-1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Orbitron:wght@500;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -39,21 +39,40 @@
     <h1 class="page-title">Dashboard</h1>
     <p class="page-intro">Retrouvez les dossiers du Site 11 et suivez leur état en un coup d’œil.</p>
     <div class="stats-grid" aria-label="Résumé des dossiers">
-      <article class="stat-card"><span class="stat-label">Dossiers enregistrés</span><strong class="stat-value" id="stat-total">—</strong><span class="stat-caption">Visibles selon votre accès</span></article>
-      <article class="stat-card"><span class="stat-label">Surveillance active</span><strong class="stat-value" id="stat-active">—</strong><span class="stat-caption">Dossiers à suivre</span></article>
-      <article class="stat-card"><span class="stat-label">Niveaux d’accès</span><strong class="stat-value" id="stat-levels">—</strong><span class="stat-caption">Niveaux représentés</span></article>
+      <article class="stat-card"><span class="stat-label">Dossiers actifs</span><strong class="stat-value" id="stat-total">—</strong><span class="stat-caption">Visibles selon votre accès</span></article>
+      <article class="stat-card stat-waiting"><span class="stat-label">En attente</span><strong class="stat-value" id="stat-waiting">—</strong><span class="stat-caption">À prendre en charge</span></article>
+      <article class="stat-card stat-progress"><span class="stat-label">En cours</span><strong class="stat-value" id="stat-progress">—</strong><span class="stat-caption">Traitement en cours</span></article>
+      <article class="stat-card stat-finished"><span class="stat-label">Terminés</span><strong class="stat-value" id="stat-finished">—</strong><span class="stat-caption">Fini de traitement</span></article>
+      <article class="stat-card stat-classified"><span class="stat-label">Classified</span><strong class="stat-value" id="stat-classified">—</strong><span class="stat-caption">Accès niveau 5</span></article>
     </div>
     <section class="panel">
       <div class="panel-header">
         <div><p class="eyebrow">Dossiers autorisés pour votre niveau</p><h2 class="panel-title"><i class="fa-solid fa-folder-open" aria-hidden="true"></i> Dossiers</h2></div>
-        <button class="btn-add" id="open-modal" type="button" hidden><i class="fa-solid fa-plus" aria-hidden="true"></i> Nouveau dossier</button>
+        <div class="panel-actions">
+          <button class="btn-export" id="export-csv" type="button" hidden><i class="fa-solid fa-file-csv" aria-hidden="true"></i> Export CSV</button>
+          <button class="btn-export" id="export-pdf" type="button" hidden><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Export PDF</button>
+          <button class="btn-export" id="toggle-archives" type="button" hidden><i class="fa-solid fa-box-archive" aria-hidden="true"></i> Afficher les archives</button>
+          <button class="btn-add" id="open-modal" type="button" hidden><i class="fa-solid fa-plus" aria-hidden="true"></i> Nouveau dossier</button>
+        </div>
       </div>
       <p class="form-feedback" id="dashboard-feedback" role="status" aria-live="polite"></p>
+      <div class="dossier-filters" aria-label="Recherche et filtres des dossiers">
+        <label class="filter-search" for="dossier-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span class="visually-hidden">Rechercher un code ou un sujet</span><input id="dossier-search" type="search" placeholder="Rechercher par code ou sujet"></label>
+        <label for="filter-level"><span class="visually-hidden">Filtrer par niveau</span><select class="form-control" id="filter-level"><option value="">Tous les niveaux</option><option value="0">Niveau 0</option><option value="1">Niveau 1</option><option value="2">Niveau 2</option><option value="3">Niveau 3</option><option value="4">Niveau 4</option><option value="5">Niveau 5</option></select></label>
+        <label for="filter-status"><span class="visually-hidden">Filtrer par statut</span><select class="form-control" id="filter-status"><option value="">Tous les statuts</option><option>Classified</option><option>Fini de traitement</option><option>En cours de traitement</option><option>En attente de traitement</option></select></label>
+      </div>
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr><th>CODE</th><th>SUJET</th><th>NIVEAU</th><th>STATUT</th><th id="table-actions-heading" hidden>ACTIONS</th></tr></thead>
           <tbody id="dossiers-table-body"></tbody>
         </table>
+      </div>
+      <div class="modal" id="history-modal" role="dialog" aria-modal="true" aria-labelledby="history-title" hidden>
+        <div class="modal-content history-content">
+          <div class="panel-header"><h2 id="history-title">Historique du dossier</h2><button class="icon-button" id="close-history" type="button" aria-label="Fermer">×</button></div>
+          <p class="form-feedback" id="history-feedback" role="status" aria-live="polite"></p>
+          <ol class="dossier-history" id="dossier-history"></ol>
+        </div>
       </div>
     </section>
     <p class="notice"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Les dossiers sont filtrés selon le niveau d’accès de votre compte. Les visiteurs non connectés voient les dossiers de niveaux 0 et 1.</p>

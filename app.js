@@ -4,6 +4,9 @@ let currentAgent = null;
 let visitorSessionPromise = null;
 let editingDossierId = null;
 let dossierEditMode = false;
+let dossierCache = [];
+let showArchivedDossiers = false;
+let agentNotificationsChannel = null;
 
 const DOSSIER_STATUSES = [
   "Classified",
@@ -316,31 +319,52 @@ function createCell(text, className = "") {
 }
 
 function updateDashboardStats(rows) {
+  const totalLabel = document.querySelector("#stat-total").previousElementSibling;
+  totalLabel.textContent = showArchivedDossiers ? "Dossiers archivés" : "Dossiers actifs";
   document.getElementById("stat-total").textContent = String(rows.length);
-  document.getElementById("stat-active").textContent = String(
-    rows.filter(row => row.statut === "En cours de traitement").length
-  );
-  document.getElementById("stat-levels").textContent = String(new Set(rows.map(row => row.niveau)).size);
+  document.getElementById("stat-waiting").textContent = String(rows.filter(row => row.statut === "En attente de traitement").length);
+  document.getElementById("stat-progress").textContent = String(rows.filter(row => row.statut === "En cours de traitement").length);
+  document.getElementById("stat-finished").textContent = String(rows.filter(row => row.statut === "Fini de traitement").length);
+  document.getElementById("stat-classified").textContent = String(rows.filter(row => row.statut === "Classified").length);
 }
 
 async function fetchDossiers() {
-  const { data, error } = await getSupabase()
+  let query = getSupabase()
     .from("dossiers")
-    .select("id, code, sujet, niveau, statut, created_at")
+    .select("id, code, sujet, niveau, statut, created_at, archived_at")
     .order("id", { ascending: false });
+  query = showArchivedDossiers
+    ? query.not("archived_at", "is", null)
+    : query.is("archived_at", null);
+  const { data, error } = await query;
   if (error) throw error;
 
   const rows = data ?? [];
+  dossierCache = rows;
   updateDashboardStats(rows);
+  renderDossiers();
+}
+
+function renderDossiers() {
+  const search = document.getElementById("dossier-search")?.value.trim().toLocaleLowerCase("fr") ?? "";
+  const level = document.getElementById("filter-level")?.value ?? "";
+  const status = document.getElementById("filter-status")?.value ?? "";
+  const rows = dossierCache.filter(dossier =>
+    (!search || dossier.code.toLocaleLowerCase("fr").includes(search) || dossier.sujet.toLocaleLowerCase("fr").includes(search)) &&
+    (!level || String(dossier.niveau) === level) &&
+    (!status || dossier.statut === status)
+  );
   const tbody = document.getElementById("dossiers-table-body");
   tbody.replaceChildren();
 
   if (!rows.length) {
     const emptyRow = document.createElement("tr");
-    const emptyCell = createCell(currentUser
-      ? "Aucun dossier accessible à votre niveau."
-      : "Aucun dossier public pour le moment.");
-    emptyCell.colSpan = dossierEditMode ? 5 : 4;
+    const emptyCell = createCell(dossierCache.length
+      ? "Aucun dossier ne correspond à ces filtres."
+      : currentUser
+        ? "Aucun dossier accessible à votre niveau."
+        : "Aucun dossier public pour le moment.");
+    emptyCell.colSpan = dossierEditMode || currentAgent?.access_level >= 4 ? 5 : 4;
     emptyCell.className = "empty-state";
     emptyRow.appendChild(emptyCell);
     tbody.appendChild(emptyRow);
@@ -349,6 +373,9 @@ async function fetchDossiers() {
 
   for (const dossier of rows) {
     const row = document.createElement("tr");
+    row.classList.add(dossier.statut === "Classified" ? "priority-classified"
+      : dossier.statut === "En attente de traitement" ? "priority-waiting"
+        : dossier.statut === "En cours de traitement" ? "priority-progress" : "priority-finished");
     row.appendChild(createCell(dossier.code, "code-text"));
     row.appendChild(createCell(dossier.sujet));
     const levelCell = document.createElement("td");
@@ -357,23 +384,39 @@ async function fetchDossiers() {
     badge.textContent = `Niveau ${dossier.niveau}`;
     levelCell.appendChild(badge);
     row.appendChild(levelCell);
-    row.appendChild(createCell(dossier.statut));
+    const statusCell = createCell(dossier.statut, `status-cell status-${DOSSIER_STATUSES.indexOf(dossier.statut)}`);
+    row.appendChild(statusCell);
 
-    if (dossierEditMode) {
+    if (dossierEditMode || (currentAgent && currentAgent.access_level >= 4)) {
       const actions = document.createElement("td");
-      const edit = document.createElement("button");
-      edit.className = "btn-edit";
-      edit.type = "button";
-      edit.setAttribute("aria-label", `Modifier le dossier ${dossier.code}`);
-      edit.innerHTML = '<i class="fa-solid fa-pen" aria-hidden="true"></i>';
-      edit.addEventListener("click", () => openDossierModal(dossier));
-      const remove = document.createElement("button");
-      remove.className = "btn-del";
-      remove.type = "button";
-      remove.setAttribute("aria-label", `Supprimer le dossier ${dossier.code}`);
-      remove.innerHTML = '<i class="fa-solid fa-trash" aria-hidden="true"></i>';
-      remove.addEventListener("click", () => deleteDossier(dossier));
-      actions.append(edit, remove);
+      if (dossierEditMode) {
+        const edit = document.createElement("button");
+        edit.className = "btn-edit";
+        edit.type = "button";
+        edit.setAttribute("aria-label", `Modifier le dossier ${dossier.code}`);
+        edit.innerHTML = '<i class="fa-solid fa-pen" aria-hidden="true"></i>';
+        edit.addEventListener("click", () => openDossierModal(dossier));
+        actions.appendChild(edit);
+        if (currentAgent && currentAgent.access_level >= 4) {
+          const archive = document.createElement("button");
+          archive.className = "btn-archive";
+          archive.type = "button";
+          archive.setAttribute("aria-label", `${showArchivedDossiers ? "Restaurer" : "Archiver"} le dossier ${dossier.code}`);
+          archive.title = showArchivedDossiers ? "Restaurer" : "Archiver";
+          archive.innerHTML = `<i class="fa-solid ${showArchivedDossiers ? "fa-box-open" : "fa-box-archive"}" aria-hidden="true"></i>`;
+          archive.addEventListener("click", () => archiveDossier(dossier, !showArchivedDossiers));
+          actions.appendChild(archive);
+        }
+      }
+      if (currentAgent && currentAgent.access_level >= 4) {
+        const history = document.createElement("button");
+        history.className = "btn-edit";
+        history.type = "button";
+        history.setAttribute("aria-label", `Afficher l’historique du dossier ${dossier.code}`);
+        history.innerHTML = '<i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>';
+        history.addEventListener("click", () => openDossierHistory(dossier));
+        actions.appendChild(history);
+      }
       row.appendChild(actions);
     }
     tbody.appendChild(row);
@@ -449,11 +492,12 @@ async function handleDossierSubmit(event) {
   await fetchDossiers();
 }
 
-async function deleteDossier(dossier) {
-  if (!confirm(`Supprimer définitivement le dossier ${dossier.code} ?`)) return;
+async function archiveDossier(dossier, archive) {
+  const action = archive ? "archiver" : "restaurer";
+  if (!confirm(`Confirmer la ${action} du dossier ${dossier.code} ?`)) return;
   const { data, error } = await getSupabase()
     .from("dossiers")
-    .delete()
+    .update({ archived_at: archive ? new Date().toISOString() : null, archived_by: archive ? currentUser.id : null })
     .eq("id", dossier.id)
     .select("id");
   if (error) {
@@ -461,11 +505,82 @@ async function deleteDossier(dossier) {
     return;
   }
   if (!data?.length) {
-    setFeedback("dashboard-feedback", "Dossier non supprimé : votre niveau d’accès est insuffisant.");
+    setFeedback("dashboard-feedback", "Dossier non modifié : votre niveau d’accès est insuffisant.");
     return;
   }
-  setFeedback("dashboard-feedback", `Dossier ${dossier.code} supprimé.`, false);
+  setFeedback("dashboard-feedback", `Dossier ${dossier.code} ${archive ? "archivé" : "restauré"}.`, false);
   await fetchDossiers();
+}
+
+async function openDossierHistory(dossier) {
+  const modal = document.getElementById("history-modal");
+  const list = document.getElementById("dossier-history");
+  document.getElementById("history-title").textContent = `Historique — ${dossier.code}`;
+  list.replaceChildren();
+  modal.hidden = false;
+  modal.classList.add("open");
+  setFeedback("history-feedback", "");
+  try {
+    const { data, error } = await getSupabase()
+      .from("activity_logs")
+      .select("actor_email, action, details, created_at")
+      .eq("target_type", "dossier")
+      .eq("target_id", String(dossier.id))
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    if (!data?.length) {
+      const empty = document.createElement("li");
+      empty.textContent = "Aucun changement enregistré.";
+      list.appendChild(empty);
+      return;
+    }
+    data.forEach(entry => {
+      const item = document.createElement("li");
+      const heading = document.createElement("strong");
+      heading.textContent = `${entry.actor_email} · ${new Date(entry.created_at).toLocaleString("fr-FR")}`;
+      const action = document.createElement("span");
+      action.textContent = entry.action.replaceAll("_", " ");
+      const details = document.createElement("pre");
+      details.textContent = JSON.stringify(entry.details, null, 2);
+      item.append(heading, action, details);
+      list.appendChild(item);
+    });
+    setFeedback("history-feedback", "");
+  } catch (error) {
+    setFeedback("history-feedback", friendlyError(error));
+  }
+}
+
+function exportDossiersCsv() {
+  if (!currentAgent || currentAgent.access_level < 4) return;
+  const records = dossierCache;
+  const fields = ["code", "sujet", "niveau", "statut", "created_at"];
+  const csvCell = value => `"${String(value ?? "").replaceAll('"', '""')}"`;
+  const csv = [fields.join(";"), ...records.map(row => fields.map(field => csvCell(field === "niveau" ? `Niveau ${row[field]}` : row[field])).join(";"))].join("\r\n");
+  const url = URL.createObjectURL(new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `dossiers-site11-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportDossiersPdf() {
+  if (!currentAgent || currentAgent.access_level < 4) return;
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    setFeedback("dashboard-feedback", "Autorisez les fenêtres pop-up pour préparer l’export PDF.");
+    return;
+  }
+  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[character]);
+  const tableRows = dossierCache.map(row =>
+    `<tr><td>${escapeHtml(row.code)}</td><td>${escapeHtml(row.sujet)}</td><td>Niveau ${escapeHtml(row.niveau)}</td><td>${escapeHtml(row.statut)}</td></tr>`
+  ).join("");
+  printWindow.document.write(`<!doctype html><html lang="fr"><meta charset="utf-8"><title>Export des dossiers Site 11</title><style>body{font:14px Arial,sans-serif;margin:24px;color:#111}h1{font-size:20px}table{width:100%;border-collapse:collapse}th,td{padding:8px;border:1px solid #bbb;text-align:left}th{background:#eee}@media print{body{margin:0}}</style><h1>Export des dossiers — Site 11</h1><p>Exporté le ${escapeHtml(new Date().toLocaleString("fr-FR"))} · Niveau ${currentAgent.access_level}</p><table><thead><tr><th>Code</th><th>Sujet</th><th>Niveau</th><th>Statut</th></tr></thead><tbody>${tableRows}</tbody></table><script>window.onload=()=>window.print()</script></html>`);
+  printWindow.document.close();
+  setFeedback("dashboard-feedback", "Dans la fenêtre d’impression, choisissez « Enregistrer au format PDF ».", false);
 }
 
 function setDossierEditMode(enabled) {
@@ -480,8 +595,8 @@ function setDossierEditMode(enabled) {
   const addButton = document.getElementById("open-modal");
   if (addButton) addButton.hidden = !enabled;
   const actionsHeading = document.getElementById("table-actions-heading");
-  if (actionsHeading) actionsHeading.hidden = !enabled;
-  fetchDossiers().catch(error => setFeedback("dashboard-feedback", friendlyError(error)));
+  if (actionsHeading) actionsHeading.hidden = !enabled && !(currentAgent?.access_level >= 4);
+  renderDossiers();
 }
 
 function formatChatTime(value) {
@@ -536,7 +651,7 @@ async function ensureVisitorSession(createIfMissing = true) {
   return visitorSessionPromise;
 }
 
-function renderChatMessageList(container, messages, agentView) {
+async function renderChatMessageList(container, messages, agentView) {
   container.replaceChildren();
   if (!messages.length) {
     const empty = document.createElement("p");
@@ -558,6 +673,21 @@ function renderChatMessageList(container, messages, agentView) {
     time.dateTime = message.created_at;
     time.textContent = formatChatTime(message.created_at);
     item.append(label, body, time);
+    if (message.attachment_path) {
+      const { data, error } = await getSupabase().storage.from("chat-attachments")
+        .createSignedUrl(message.attachment_path, 900);
+      if (error) throw error;
+      const attachment = document.createElement("a");
+      attachment.className = "chat-attachment";
+      attachment.href = data.signedUrl;
+      attachment.target = "_blank";
+      attachment.rel = "noopener noreferrer";
+      const icon = document.createElement("i");
+      icon.className = "fa-solid fa-paperclip";
+      icon.setAttribute("aria-hidden", "true");
+      attachment.append(icon, document.createTextNode(` ${message.attachment_name} (${(message.attachment_size / 1024 / 1024).toFixed(1)} Mo)`));
+      item.appendChild(attachment);
+    }
     container.appendChild(item);
   }
   container.scrollTop = container.scrollHeight;
@@ -575,11 +705,49 @@ async function fetchVisitorConversations() {
 async function fetchConversationMessages(conversationId) {
   const { data, error } = await getSupabase()
     .from("chat_messages")
-    .select("id, sender_id, sender_role, body, created_at")
+    .select("id, sender_id, sender_role, body, created_at, attachment_path, attachment_name, attachment_type, attachment_size")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
   if (error) throw error;
   return data ?? [];
+}
+
+async function sendChatAttachment(conversationId, file, body, senderRole) {
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error("Formats autorisés : JPG, PNG, WebP et PDF.");
+  }
+  if (file.size < 1 || file.size > 10 * 1024 * 1024) {
+    throw new Error("Chaque pièce jointe doit peser au maximum 10 Mo.");
+  }
+  const extension = ({
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "application/pdf": "pdf"
+  })[file.type];
+  const path = `${conversationId}/${crypto.randomUUID()}.${extension}`;
+  const storage = getSupabase().storage.from("chat-attachments");
+  const { error: uploadError } = await storage.upload(path, file, {
+    contentType: file.type,
+    upsert: false
+  });
+  if (uploadError) throw uploadError;
+  const { error: messageError } = await getSupabase().from("chat_messages").insert({
+    conversation_id: conversationId,
+    sender_id: currentUser.id,
+    sender_role: senderRole,
+    body: body || `Pièce jointe : ${file.name}`,
+    attachment_path: path,
+    attachment_name: file.name,
+    attachment_type: file.type,
+    attachment_size: file.size
+  });
+  if (messageError) {
+    const { error: removeError } = await storage.remove([path]);
+    if (removeError) console.error("Pièce jointe envoyée mais non associée à un message :", removeError);
+    throw messageError;
+  }
 }
 
 async function startVisitorConversation(name, body) {
@@ -607,6 +775,7 @@ async function initializeMessagesPage() {
     window.location.replace("connexion.html");
     return;
   }
+  configureAttachmentPicker("messages-reply-file");
 
   const list = document.getElementById("messages-conversation-list");
   const thread = document.getElementById("messages-thread");
@@ -653,7 +822,7 @@ async function initializeMessagesPage() {
     deleteButton.hidden = agent.access_level < 5;
     renderList();
     try {
-      renderChatMessageList(thread, await fetchConversationMessages(id), true);
+      await renderChatMessageList(thread, await fetchConversationMessages(id), true);
       feedback("");
     } catch (error) {
       feedback(friendlyError(error));
@@ -676,16 +845,22 @@ async function initializeMessagesPage() {
     if (!selectedId) return;
     const input = document.getElementById("messages-reply");
     const body = input.value.trim();
-    if (!body) return;
+    const fileInput = document.getElementById("messages-reply-file");
+    const file = fileInput.files[0];
+    if (!body && !file) return;
     try {
-      const { error } = await getSupabase().from("chat_messages").insert({
-        conversation_id: selectedId,
-        sender_id: currentUser.id,
-        sender_role: "agent",
-        body
-      });
-      if (error) throw error;
+      if (file) await sendChatAttachment(selectedId, file, body, "agent");
+      else {
+        const { error } = await getSupabase().from("chat_messages").insert({
+          conversation_id: selectedId,
+          sender_id: currentUser.id,
+          sender_role: "agent",
+          body
+        });
+        if (error) throw error;
+      }
       input.value = "";
+      fileInput.value = "";
       await refresh();
     } catch (error) {
       feedback(friendlyError(error));
@@ -725,6 +900,132 @@ async function initializeMessagesPage() {
   window.setInterval(refresh, 10000);
 }
 
+function showAgentNotification(title, body, targetPage) {
+  const toast = document.createElement("div");
+  toast.className = "agent-notification-toast";
+  const heading = document.createElement("strong");
+  heading.textContent = title;
+  const message = document.createElement("span");
+  message.textContent = body;
+  toast.append(heading, message);
+  toast.addEventListener("click", () => {
+    window.location.href = targetPage;
+  });
+  document.body.appendChild(toast);
+  window.setTimeout(() => toast.remove(), 8000);
+  if ("Notification" in window && Notification.permission === "granted") {
+    try {
+      const notification = new Notification(title, { body, tag: `site11-${targetPage}` });
+      notification.onclick = () => {
+        window.focus();
+        window.location.href = targetPage;
+      };
+    } catch (error) {
+      console.warn("La notification système n’a pas pu être affichée :", error);
+    }
+  }
+}
+
+function configureAttachmentPicker(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const label = document.querySelector(`label[for="${inputId}"] span`);
+  input.addEventListener("change", () => {
+    const file = input.files[0];
+    if (label) label.textContent = file ? file.name : "Joindre";
+  });
+}
+
+async function initializeAgentNotifications() {
+  if (!currentAgent) return;
+  const actions = document.querySelector(".header-actions");
+  if (!actions) return;
+  const button = document.createElement("button");
+  button.className = "notification-toggle";
+  button.type = "button";
+  button.setAttribute("aria-pressed", "false");
+  button.innerHTML = '<i class="fa-regular fa-bell" aria-hidden="true"></i><span>Activer les alertes</span>';
+  actions.insertBefore(button, actions.firstChild);
+  const preferenceKey = `site11-agent-notifications-${currentUser.id}`;
+  let enabled = false;
+  try {
+    enabled = localStorage.getItem(preferenceKey) === "true";
+  } catch (error) {
+    console.warn("La préférence des alertes ne peut pas être lue dans ce navigateur :", error);
+    button.title = "Les alertes fonctionneront pour cette visite, mais votre choix ne pourra pas être mémorisé.";
+  }
+
+  const stopListening = () => {
+    if (!agentNotificationsChannel) return;
+    getSupabase().removeChannel(agentNotificationsChannel);
+    agentNotificationsChannel = null;
+  };
+  const startListening = () => {
+    if (agentNotificationsChannel) return;
+    agentNotificationsChannel = getSupabase()
+      .channel(`site11-agent-events-${currentUser.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "dossiers" }, payload => {
+        const dossier = payload.new?.code ? payload.new : payload.old;
+        const action = payload.eventType === "INSERT" ? "Nouveau dossier"
+          : payload.eventType === "DELETE" ? "Dossier supprimé" : "Dossier modifié";
+        showAgentNotification(action, dossier?.code || "Un dossier a changé.", "dashboard.html");
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, async payload => {
+        if (payload.new?.sender_role !== "visitor") return;
+        try {
+          const { data, error } = await getSupabase().from("chat_conversations")
+            .select("visitor_name").eq("id", payload.new.conversation_id).maybeSingle();
+          if (error) throw error;
+          showAgentNotification("Nouveau message visiteur", data?.visitor_name || "Une conversation a reçu un message.", "messages.html");
+        } catch (error) {
+          console.error("Impossible de récupérer l’origine du nouveau message :", error);
+          showAgentNotification("Nouveau message visiteur", "Une conversation a reçu un message.", "messages.html");
+        }
+      })
+      .subscribe((status, error) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.error("Écoute des notifications impossible :", error || status);
+          button.title = "Connexion aux notifications impossible. Vérifiez la migration Realtime Supabase.";
+        }
+      });
+  };
+  const renderButton = () => {
+    button.setAttribute("aria-pressed", String(enabled));
+    button.innerHTML = enabled
+      ? '<i class="fa-solid fa-bell" aria-hidden="true"></i><span>Alertes activées</span>'
+      : '<i class="fa-regular fa-bell" aria-hidden="true"></i><span>Activer les alertes</span>';
+  };
+  renderButton();
+  if (enabled) startListening();
+  button.addEventListener("click", async () => {
+    enabled = !enabled;
+    if (enabled) {
+      if ("Notification" in window && Notification.permission === "default") {
+        try {
+          await Notification.requestPermission();
+        } catch (error) {
+          console.warn("La permission de notification système n’a pas pu être demandée :", error);
+        }
+      }
+      try {
+        localStorage.setItem(preferenceKey, "true");
+      } catch (error) {
+        console.warn("La préférence des alertes ne peut pas être mémorisée :", error);
+        button.title = "Les alertes fonctionneront pour cette visite uniquement.";
+      }
+      startListening();
+    } else {
+      try {
+        localStorage.removeItem(preferenceKey);
+      } catch (error) {
+        console.warn("La préférence des alertes n’a pas pu être effacée :", error);
+      }
+      stopListening();
+    }
+    renderButton();
+  });
+}
+
 function appendChatWidget() {
   const root = document.createElement("div");
   root.id = "site-chat";
@@ -739,18 +1040,21 @@ function appendChatWidget() {
         <div class="chat-list-view" id="chat-list-view">
           <button class="chat-new-button" id="chat-new-button" type="button"><i class="fa-solid fa-plus" aria-hidden="true"></i> Nouvelle conversation</button>
           <div class="chat-conversation-list" id="chat-conversation-list"></div>
-          <p class="chat-privacy">Vos conversations restent accessibles dans ce navigateur.</p>
+          <p class="chat-privacy">Vos conversations sont conservées dans ce navigateur. Utilisez le même navigateur pour les retrouver.</p>
         </div>
         <div class="chat-detail-view" id="chat-detail-view" hidden>
           <button class="chat-back-button" id="chat-back-button" type="button"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Toutes les conversations</button>
           <div class="chat-current-heading"><span class="chat-status" id="chat-current-status"></span><strong id="chat-current-name"></strong></div>
           <div class="chat-thread" id="chat-thread" aria-live="polite"></div>
-          <form class="chat-reply-form" id="chat-reply-form"><label class="visually-hidden" for="chat-reply-input">Votre message</label><textarea id="chat-reply-input" maxlength="4000" required placeholder="Écrivez votre message…"></textarea><button type="submit" aria-label="Envoyer le message"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i></button></form>
+            <form class="chat-reply-form" id="chat-reply-form"><label class="visually-hidden" for="chat-reply-input">Votre message</label><textarea id="chat-reply-input" maxlength="4000" placeholder="Écrivez votre message…"></textarea><input class="chat-file-input" id="chat-reply-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><label class="chat-file-label" for="chat-reply-file"><i class="fa-solid fa-paperclip" aria-hidden="true"></i><span>Joindre</span></label><button type="submit" aria-label="Envoyer le message"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i></button></form>
         </div>
         <form class="chat-new-view" id="chat-new-form" hidden>
           <button class="chat-back-button" id="chat-new-back" type="button"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Toutes les conversations</button>
+          <p class="chat-guidance">Après l’envoi, l’équipe pourra répondre dans cette conversation. Revenez avec le même navigateur pour lire sa réponse.</p>
           <label for="chat-visitor-name">Votre nom</label><input id="chat-visitor-name" maxlength="100" required autocomplete="name" placeholder="Nom ou pseudonyme">
           <label for="chat-first-message">Votre message</label><textarea id="chat-first-message" maxlength="4000" required placeholder="Comment pouvons-nous vous aider ?"></textarea>
+          <input class="chat-file-input" id="chat-first-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><label class="chat-file-label" for="chat-first-file"><i class="fa-solid fa-paperclip" aria-hidden="true"></i><span>Ajouter une pièce jointe (facultatif)</span></label>
+          <small class="chat-file-help">JPG, PNG, WebP ou PDF · 10 Mo maximum</small>
           <button class="chat-send-first" type="submit"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Envoyer</button>
         </form>
       </div>
@@ -768,6 +1072,8 @@ async function initializeChatWidget() {
   const newView = document.getElementById("chat-new-form");
   const list = document.getElementById("chat-conversation-list");
   const thread = document.getElementById("chat-thread");
+  configureAttachmentPicker("chat-first-file");
+  configureAttachmentPicker("chat-reply-file");
   let selectedConversationId = null;
   let refreshTimer = null;
 
@@ -833,7 +1139,7 @@ async function initializeChatWidget() {
     status.textContent = statusLabel(conversation.status);
     try {
       const messages = await fetchConversationMessages(conversation.id);
-      renderChatMessageList(thread, messages, false);
+      await renderChatMessageList(thread, messages, false);
       setChatError(null);
     } catch (error) {
       setChatError(error);
@@ -887,12 +1193,25 @@ async function initializeChatWidget() {
     event.preventDefault();
     const button = event.currentTarget.querySelector("button[type=submit]");
     button.disabled = true;
+    const file = document.getElementById("chat-first-file").files[0];
     try {
+      if (file && (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(file.type) || file.size > 10 * 1024 * 1024)) {
+        throw new Error("Choisissez une image JPG/PNG/WebP ou un PDF de 10 Mo maximum.");
+      }
       const id = await startVisitorConversation(
         document.getElementById("chat-visitor-name").value.trim(),
         document.getElementById("chat-first-message").value.trim()
       );
       document.getElementById("chat-new-form").reset();
+      if (file) {
+        try {
+          await sendChatAttachment(id, file, "", "visitor");
+        } catch (error) {
+          const conversation = (await fetchVisitorConversations()).find(item => item.id === id);
+          if (conversation) await openVisitorConversation(conversation);
+          throw error;
+        }
+      }
       const conversation = (await fetchVisitorConversations()).find(item => item.id === id);
       if (!conversation) throw new Error("La conversation a été créée mais ne peut pas être affichée.");
       await openVisitorConversation(conversation);
@@ -907,16 +1226,22 @@ async function initializeChatWidget() {
     if (!selectedConversationId) return;
     const input = document.getElementById("chat-reply-input");
     const body = input.value.trim();
-    if (!body) return;
+    const fileInput = document.getElementById("chat-reply-file");
+    const file = fileInput.files[0];
+    if (!body && !file) return;
     try {
-      const { error } = await getSupabase().from("chat_messages").insert({
-        conversation_id: selectedConversationId,
-        sender_id: currentUser.id,
-        sender_role: "visitor",
-        body
-      });
-      if (error) throw error;
+      if (file) await sendChatAttachment(selectedConversationId, file, body, "visitor");
+      else {
+        const { error } = await getSupabase().from("chat_messages").insert({
+          conversation_id: selectedConversationId,
+          sender_id: currentUser.id,
+          sender_role: "visitor",
+          body
+        });
+        if (error) throw error;
+      }
       input.value = "";
+      fileInput.value = "";
       const conversations = await fetchVisitorConversations();
       const conversation = conversations.find(item => item.id === selectedConversationId);
       if (conversation) await openVisitorConversation(conversation);
@@ -1105,6 +1430,40 @@ async function initializeDashboard() {
   }
   const addButton = document.getElementById("open-modal");
   if (addButton) addButton.addEventListener("click", () => openDossierModal());
+  const exportCsv = document.getElementById("export-csv");
+  const exportPdf = document.getElementById("export-pdf");
+  const archiveToggle = document.getElementById("toggle-archives");
+  const privileged = Boolean(currentAgent && currentAgent.access_level >= 4);
+  if (exportCsv) {
+    exportCsv.hidden = !privileged;
+    exportCsv.addEventListener("click", exportDossiersCsv);
+  }
+  if (exportPdf) {
+    exportPdf.hidden = !privileged;
+    exportPdf.addEventListener("click", exportDossiersPdf);
+  }
+  if (archiveToggle) {
+    archiveToggle.hidden = !privileged;
+    archiveToggle.addEventListener("click", async () => {
+      showArchivedDossiers = !showArchivedDossiers;
+      archiveToggle.innerHTML = `<i class="fa-solid ${showArchivedDossiers ? "fa-box-open" : "fa-box-archive"}" aria-hidden="true"></i> ${showArchivedDossiers ? "Afficher les dossiers actifs" : "Afficher les archives"}`;
+      await fetchDossiers().catch(error => setFeedback("dashboard-feedback", friendlyError(error)));
+    });
+  }
+  document.getElementById("dossier-search").addEventListener("input", renderDossiers);
+  document.getElementById("filter-level").addEventListener("change", renderDossiers);
+  document.getElementById("filter-status").addEventListener("change", renderDossiers);
+  document.getElementById("close-history").addEventListener("click", () => {
+    const historyModal = document.getElementById("history-modal");
+    historyModal.hidden = true;
+    historyModal.classList.remove("open");
+  });
+  document.getElementById("history-modal").addEventListener("click", event => {
+    if (event.target.id === "history-modal") {
+      event.currentTarget.hidden = true;
+      event.currentTarget.classList.remove("open");
+    }
+  });
   const form = document.getElementById("dossier-form");
   if (form) form.addEventListener("submit", handleDossierSubmit);
   const closeButton = document.getElementById("close-modal");
@@ -1130,9 +1489,15 @@ async function initializeDashboard() {
       if (event.target === modal) closeDossierModal();
     });
     document.addEventListener("keydown", event => {
-      if (event.key === "Escape") closeDossierModal();
+      if (event.key === "Escape") {
+        closeDossierModal();
+        const historyModal = document.getElementById("history-modal");
+        historyModal.hidden = true;
+        historyModal.classList.remove("open");
+      }
     });
   }
+  document.getElementById("table-actions-heading").hidden = !privileged;
   await fetchDossiers();
 }
 
@@ -1195,6 +1560,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     await loadCurrentAgent();
+    await initializeAgentNotifications();
     try {
       if (await enforceMaintenance()) return;
     } catch (maintenanceError) {

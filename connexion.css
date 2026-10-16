@@ -37,3 +37,4 @@ button,input{font:inherit}
 [hidden]{display:none!important}
 @media(max-width:780px){.site-header{flex-wrap:wrap}.site-nav{order:3;width:100%;overflow-x:auto}.site-nav a{white-space:nowrap}.header-actions{margin-left:auto}}
 @media(max-width:560px){.brand strong{font-size:.75rem}.brand small{font-size:.58rem}.site-nav a{padding:.55rem .65rem;font-size:.76rem}.user-badge{display:none}}
+@media(max-width:780px){.site-nav a{min-height:42px}.header-actions .btn-primary,.header-actions .btn-logout{min-height:42px}.form-control,.login-submit{min-height:46px}}

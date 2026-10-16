@@ -32,3 +32,4 @@ main{width:min(1240px,calc(100% - 2rem));min-height:calc(100vh - 190px);margin:0
 [hidden]{display:none!important}
 @media(max-width:900px){.site-header{flex-wrap:wrap}.site-nav{order:3;width:100%;overflow-x:auto}.site-nav a{white-space:nowrap}.header-actions{margin-left:auto}.data-table{min-width:950px}}
 @media(max-width:560px){.brand strong{font-size:.75rem}.brand small{font-size:.58rem}.site-nav a{padding:.55rem .6rem;font-size:.74rem}.user-badge{display:none}}
+@media(max-width:900px){.site-nav a{min-height:42px}.header-actions .btn-primary,.header-actions .btn-logout{min-height:42px}.data-table td,.data-table th{padding:.75rem}}

@@ -49,3 +49,4 @@ textarea.form-control{min-height:150px;resize:vertical}
 [hidden]{display:none!important}
 @media(max-width:780px){.site-header{flex-wrap:wrap}.site-nav{order:3;width:100%;overflow-x:auto}.site-nav a{white-space:nowrap}.header-actions{margin-left:auto}.contact-layout{grid-template-columns:1fr}.contact-aside{grid-template-columns:repeat(2,minmax(0,1fr))}.notice{grid-column:1/-1}}
 @media(max-width:560px){.brand strong{font-size:.75rem}.brand small{font-size:.58rem}.site-nav a{padding:.55rem .65rem;font-size:.76rem}.user-badge{display:none}.form-grid,.contact-aside{grid-template-columns:1fr}.notice{grid-column:auto}}
+@media(max-width:780px){.site-nav a{min-height:42px}.header-actions .btn-primary,.header-actions .btn-logout{min-height:42px}.form-control{min-height:44px}}

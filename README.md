@@ -17,12 +17,13 @@ Portail français organisé en pages séparées, avec Supabase pour l’authenti
 - `supabase/chat.sql` : migration de conversations, messages et accès visiteur.
 - `supabase/maintenance.sql` : réglages de maintenance globale et par page, contrôlés par le superadmin officiel.
 - `supabase/level-zero.sql` : migration pour autoriser les dossiers de niveau 0 sans perdre les données.
+- `supabase/enhancements.sql` : archivage des dossiers, pièces jointes privées au chat et activation Realtime pour les alertes.
 - `supabase/functions/manage-agent/index.ts` : création, modification et suppression sécurisées de comptes.
 - `database.sql` : ancien schéma SQLite local, conservé en archive ; le portail Supabase ne l’utilise plus.
 
 ## Mise en place Supabase
 
-1. Dans le tableau de bord Supabase, ouvrez **SQL Editor**, exécutez d’abord `supabase/schema.sql`, puis `supabase/chat.sql`, `supabase/maintenance.sql` et `supabase/level-zero.sql`. Les migrations peuvent être relancées sans supprimer les données existantes.
+1. Le projet Supabase utilisé par le portail doit déjà avoir son schéma et sa messagerie installés. Dans le tableau de bord Supabase, ouvrez **SQL Editor** et exécutez `supabase/enhancements.sql` depuis ce dépôt. La migration ajoute le bucket privé des pièces jointes (10 Mo maximum, JPG/PNG/WebP/PDF), les règles d’accès, les colonnes d’archivage et active les changements Realtime pour les dossiers et messages. Elle ne supprime pas les données existantes.
 2. Dans **Authentication > Providers / Sign In**, activez les connexions anonymes (**Anonymous Sign-Ins**) pour autoriser les visiteurs à ouvrir un chat sans compte. Gardez les inscriptions par e-mail désactivées ; les comptes agents sont créés depuis la page Comptes par un agent niveau 5.
 3. Dans **Authentication > Users**, créez puis confirmez l’utilisateur officiel `directionagencerenseignement@gmail.com`. Ne place pas son mot de passe dans Git, dans `config.js` ou dans un fichier SQL.
 4. Dans **SQL Editor**, exécutez `supabase/first-admin.sql` pour attribuer le niveau 5 et le rôle protégé d’administrateur officiel à ce compte Auth déjà créé. Si le compte existe déjà, réexécutez ce script après la migration.
@@ -32,9 +33,15 @@ Portail français organisé en pages séparées, avec Supabase pour l’authenti
 
 Le niveau d’accès agent est compris entre 1 et 5. Les dossiers vont du niveau 0 à 5 ; les visiteurs et tous les agents de niveau 1 voient les dossiers de niveau 0 et 1. Un dossier au statut `Classified` est forcé au niveau 5 côté base. Les changements de dossiers et de comptes, ainsi que les connexions et déconnexions, alimentent le journal.
 
+## Dossiers
+
+Le Dashboard propose une recherche par code ou sujet, des filtres par niveau et statut, des compteurs par état, ainsi que des indicateurs visuels de priorité. Les agents de niveau 4 et 5 peuvent consulter l’historique par dossier, exporter les dossiers accessibles en CSV ou préparer une version imprimable à enregistrer en PDF. L’archivage/restauration est réservé aux niveaux 4 et 5 ; les dossiers archivés sont masqués aux visiteurs et consultables depuis le filtre d’archives.
+
 ## Messagerie
 
-Les visiteurs ouvrent la bulle en bas à gauche pour créer et retrouver leurs conversations sur le même navigateur. La session anonyme Supabase est conservée dans le stockage local du navigateur et réutilisée entre les pages et les onglets ; ouvrir simplement la bulle ne crée plus de compte, la session n’est créée qu’à l’envoi du premier message. Les agents actifs répondent depuis **Messages** ; ils peuvent classer les conversations en attente, en cours ou traitées. Seuls les agents de niveau 5 peuvent supprimer une conversation. Chaque message, du visiteur ou d’un agent, renouvelle la conservation du chat de 24 heures. Sans nouveau message, le chat et ses messages sont supprimés après 24 heures ; un compte visiteur anonyme sans chat actif est supprimé après 12 heures. Le nettoyage s’exécute automatiquement toutes les cinq minutes via l’extension Supabase **pg_cron**. Les changements de statut seuls ne renouvellent pas le délai. Les messages ne sont pas copiés dans le journal d’audit.
+Les visiteurs ouvrent la bulle en bas à gauche pour créer et retrouver leurs conversations sur le même navigateur. La session anonyme Supabase est conservée dans le stockage local du navigateur et réutilisée entre les pages et les onglets ; ouvrir simplement la bulle ne crée plus de compte, la session n’est créée qu’à l’envoi du premier message. Les visiteurs et agents peuvent joindre des images JPG/PNG/WebP ou un PDF (10 Mo maximum). Les fichiers sont stockés dans un bucket privé, accessibles seulement aux participants autorisés de la conversation et supprimés avec leurs messages. Les agents actifs répondent depuis **Messages** ; ils peuvent classer les conversations en attente, en cours ou traitées. Seuls les agents de niveau 5 peuvent supprimer une conversation. Chaque message, du visiteur ou d’un agent, renouvelle la conservation du chat de 24 heures. Sans nouveau message, le chat et ses messages sont supprimés après 24 heures ; un compte visiteur anonyme sans chat actif est supprimé après 12 heures. Le nettoyage s’exécute automatiquement toutes les cinq minutes via l’extension Supabase **pg_cron**. Les changements de statut seuls ne renouvellent pas le délai. Les messages ne sont pas copiés dans le journal d’audit.
+
+Les agents peuvent activer les alertes depuis le bouton dans l’en-tête. Tant que le site est ouvert, Realtime affiche une notification pour les nouveaux messages de visiteurs et les changements de dossiers ; les notifications du navigateur nécessitent l’autorisation de l’utilisateur.
 
 Les comptes anonymes Supabase identifient les visiteurs et ne sont pas des comptes agents. Un visiteur qui efface les données de son navigateur ne pourra plus retrouver ses conversations précédentes.
 
