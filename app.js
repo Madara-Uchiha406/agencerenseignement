@@ -28,6 +28,188 @@ const MAINTENANCE_PAGES = [
   ["maintenance.html", "Maintenance"]
 ];
 
+function initializeAnniversaryTheme() {
+  const creationDate = new Date(2026, 9, 16);
+  const today = new Date();
+  const isAnniversaryDay = today.getFullYear() >= creationDate.getFullYear()
+    && today.getMonth() === creationDate.getMonth()
+    && today.getDate() === creationDate.getDate();
+  document.body.classList.toggle("anniversary-mode", isAnniversaryDay);
+  if (!isAnniversaryDay) return;
+
+  const years = today.getFullYear() - creationDate.getFullYear();
+  if (!document.querySelector(".anniversary-banner")) {
+    const banner = document.createElement("div");
+    banner.className = "anniversary-banner";
+    banner.setAttribute("role", "status");
+    const leftIcon = document.createElement("span");
+    leftIcon.className = "anniversary-icon";
+    leftIcon.setAttribute("aria-hidden", "true");
+    leftIcon.textContent = "✦";
+    const message = document.createElement("span");
+    const title = document.createElement("strong");
+    title.textContent = years === 0
+      ? "Premier jour officiel du Site 11"
+      : `${years}${years === 1 ? "er" : "e"} anniversaire du Site 11`;
+    message.append(title, document.createTextNode(years === 0 ? " · 16 octobre 2026" : " · 16 octobre"));
+    const rightIcon = document.createElement("span");
+    rightIcon.className = "anniversary-icon";
+    rightIcon.setAttribute("aria-hidden", "true");
+    rightIcon.textContent = "✦";
+    banner.append(leftIcon, message, rightIcon);
+    document.body.prepend(banner);
+  }
+
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (!document.querySelector(".anniversary-canvas")) {
+    const canvas = document.createElement("canvas");
+    canvas.className = "anniversary-canvas";
+    canvas.setAttribute("aria-hidden", "true");
+    document.body.append(canvas);
+    for (const side of ["left", "right"]) {
+      const curtain = document.createElement("div");
+      curtain.className = `anniversary-curtain anniversary-curtain-${side}`;
+      curtain.setAttribute("aria-hidden", "true");
+      document.body.append(curtain);
+    }
+    animateAnniversaryFireworks(canvas);
+  }
+}
+
+function animateAnniversaryFireworks(canvas) {
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  const particles = [];
+  const colors = ["#ffd166", "#ff83b5", "#b49aff", "#fff1c1", "#7ee7ff"];
+  let width = 0;
+  let height = 0;
+  let nextBurst = 0;
+  let animationFrame = 0;
+  let lastFrame = 0;
+  const maxParticles = 28;
+  const frameInterval = 1000 / 24;
+
+  const resize = () => {
+    const ratio = 1;
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  };
+  const burst = () => {
+    const x = width * (.12 + Math.random() * .76);
+    const y = height * (.12 + Math.random() * .4);
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const count = 18 + Math.floor(Math.random() * 7);
+    for (let index = 0; index < count && particles.length < maxParticles; index += 1) {
+      const angle = Math.PI * 2 * index / count;
+      const speed = 1 + Math.random() * 3.2;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 34 + Math.random() * 12,
+        maxLife: 46,
+        color,
+        size: 1.2 + Math.random() * 1
+      });
+    }
+  };
+  const draw = timestamp => {
+    if (document.hidden) return;
+    if (timestamp - lastFrame < frameInterval) {
+      animationFrame = requestAnimationFrame(draw);
+      return;
+    }
+    lastFrame = timestamp;
+    context.clearRect(0, 0, width, height);
+    if (timestamp >= nextBurst) {
+      burst();
+      nextBurst = timestamp + 3200 + Math.random() * 1800;
+    }
+    context.globalCompositeOperation = "lighter";
+    for (let index = particles.length - 1; index >= 0; index -= 1) {
+      const particle = particles[index];
+      particle.x += particle.vx;
+      particle.y += particle.vy;
+      particle.vx *= .985;
+      particle.vy = particle.vy * .985 + .035;
+      particle.life -= 1;
+      if (particle.life <= 0) {
+        particles.splice(index, 1);
+        continue;
+      }
+      context.fillStyle = particle.color;
+      context.strokeStyle = particle.color;
+      context.globalAlpha = particle.life / particle.maxLife;
+      context.beginPath();
+      context.arc(particle.x, particle.y, particle.size * 1.35, 0, Math.PI * 2);
+      context.fill();
+    }
+    context.globalAlpha = 1;
+    context.globalCompositeOperation = "source-over";
+    animationFrame = requestAnimationFrame(draw);
+  };
+  resize();
+  window.addEventListener("resize", resize, { passive: true });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      cancelAnimationFrame(animationFrame);
+      particles.length = 0;
+      context.clearRect(0, 0, width, height);
+    } else {
+      cancelAnimationFrame(animationFrame);
+      nextBurst = performance.now() + 2000;
+      lastFrame = 0;
+      animationFrame = requestAnimationFrame(draw);
+    }
+  });
+  animationFrame = requestAnimationFrame(draw);
+}
+
+function initializeButtonInteractions() {
+  document.querySelectorAll("button:not(:disabled),select").forEach(control => {
+    control.classList.add("interactive-control");
+  });
+  document.addEventListener("pointermove", event => {
+    if (event.pointerType === "touch") return;
+    const control = event.target.closest?.("button:not(:disabled),select");
+    if (!control) return;
+    control.classList.add("interactive-control");
+    const bounds = control.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) / bounds.width - .5;
+    const y = (event.clientY - bounds.top) / bounds.height - .5;
+    control.style.setProperty("--tilt-x", `${(x * 5).toFixed(2)}deg`);
+    control.style.setProperty("--tilt-y", `${(-y * 5).toFixed(2)}deg`);
+  });
+  document.addEventListener("pointerleave", event => {
+    const control = event.target.closest?.("button,select");
+    if (!control) return;
+    control.style.setProperty("--tilt-x", "0deg");
+    control.style.setProperty("--tilt-y", "0deg");
+  }, true);
+  document.addEventListener("click", event => {
+    const control = event.target.closest?.("button:not(:disabled)");
+    if (!control || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    control.classList.add("interactive-control");
+    Array.from(control.childNodes).forEach(node => {
+      if (node.nodeType !== Node.TEXT_NODE || !node.textContent.trim()) return;
+      const label = document.createElement("span");
+      label.className = "interaction-label";
+      control.replaceChild(label, node);
+      label.appendChild(node);
+    });
+    const bounds = control.getBoundingClientRect();
+    const ripple = document.createElement("span");
+    ripple.className = "interaction-ripple";
+    ripple.style.left = `${event.clientX ? event.clientX - bounds.left : bounds.width / 2}px`;
+    ripple.style.top = `${event.clientY ? event.clientY - bounds.top : bounds.height / 2}px`;
+    control.appendChild(ripple);
+    ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
+  });
+}
+
 function getSupabase() {
   if (supabaseClient) return supabaseClient;
   if (!window.supabase || !AR_CONFIG.supabaseUrl || !AR_CONFIG.supabaseAnonKey) {
@@ -1780,6 +1962,8 @@ async function initializeActivityPage() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  initializeAnniversaryTheme();
+  initializeButtonInteractions();
   const logoutButton = document.getElementById("logout-button");
   if (logoutButton) logoutButton.addEventListener("click", logout);
 

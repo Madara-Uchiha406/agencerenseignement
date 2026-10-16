@@ -1,0 +1,54 @@
+:root{--motion-fast:180ms;--motion-medium:280ms;--motion-ease:cubic-bezier(.2,.75,.25,1)}
+button,a,[role=button],.info-card,.stat-card,.panel,.login-panel,.status-card,.maintenance-card,.agent-card,.inbox-conversation,.chat-conversation-item,.chat-launcher,.local-ai-launcher{transition:transform var(--motion-medium) var(--motion-ease),box-shadow var(--motion-medium) var(--motion-ease),border-color var(--motion-fast) ease,background-color var(--motion-fast) ease,color var(--motion-fast) ease,filter var(--motion-fast) ease}
+button:not(:disabled):not([aria-disabled=true]):hover,.chat-launcher:hover,.local-ai-launcher:hover{transform:perspective(500px) translateY(-3px) rotateX(var(--tilt-y,0deg)) rotateY(var(--tilt-x,0deg));box-shadow:0 12px 28px rgba(0,0,0,.3)}
+button:not(:disabled):not([aria-disabled=true]):active,.chat-launcher:active,.local-ai-launcher:active{transform:perspective(500px) translateY(1px) scale(.97)}
+a:not(.brand):hover,[role=button]:hover{transform:translateY(-2px)}
+.info-card:hover,.stat-card:hover,.login-panel:hover,.maintenance-card:hover,.agent-card:hover,.inbox-conversation:hover,.chat-conversation-item:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(0,0,0,.24)}
+.status-card:hover{transform:translateY(-3px) scale(1.008);box-shadow:0 14px 34px rgba(0,0,0,.25)}
+button i,.site-nav a i,.status-card-icon,.status-card-arrow{transition:transform var(--motion-medium) var(--motion-ease)}
+button:hover i,.site-nav a:hover i{transform:scale(1.12) rotate(-5deg)}
+.status-card:hover .status-card-icon{transform:rotate(-7deg) scale(1.08)}
+.status-card:hover .status-card-arrow{transform:translateX(4px)}
+button:focus-visible,a:focus-visible,[role=button]:focus-visible{outline:2px solid var(--cyan,#00f0ff);outline-offset:3px}
+body.anniversary-mode{isolation:isolate;--cyan:#f7c65c;--green:#ff83b5;--birthday-pink:#ff83b5;--birthday-purple:#b49aff}
+body.anniversary-mode::before,body.anniversary-mode::after{position:fixed;z-index:5;top:4.5rem;pointer-events:none;font-size:1.4rem;animation:birthday-float 4s ease-in-out infinite}
+body.anniversary-mode::before{left:clamp(1rem,5vw,4rem);content:"✦";color:var(--birthday-pink)}
+body.anniversary-mode::after{right:clamp(1rem,5vw,4rem);content:"✧";color:var(--cyan);animation-delay:-2s}
+body.anniversary-mode .site-header{border-bottom-color:color-mix(in srgb,var(--cyan) 45%,transparent)}
+body.anniversary-mode .brand-icon{filter:drop-shadow(0 0 9px color-mix(in srgb,var(--cyan) 65%,transparent))}
+.anniversary-banner{position:relative;z-index:6;display:flex;justify-content:center;align-items:center;gap:.75rem;min-height:42px;padding:.55rem 1rem;color:#ffe9b5;background:linear-gradient(100deg,#2e1b3d,#4a263f 48%,#2e1b3d);border-bottom:1px solid #f7c65c66;font:600 .76rem var(--code,monospace);letter-spacing:.025em;text-align:center}
+.anniversary-banner .anniversary-icon{color:var(--cyan);animation:birthday-bob 1.8s ease-in-out infinite}
+.anniversary-banner strong{color:#fff3cc}
+body.anniversary-mode .panel,body.anniversary-mode .info-card,body.anniversary-mode .stat-card{border-color:color-mix(in srgb,var(--cyan) 18%,var(--border,#1e293b))}
+body.anniversary-mode .btn-primary,body.anniversary-mode .btn-add{box-shadow:0 0 0 0 color-mix(in srgb,var(--cyan) 35%,transparent)}
+body.anniversary-mode .btn-primary:hover,body.anniversary-mode .btn-add:hover{box-shadow:0 7px 24px color-mix(in srgb,var(--cyan) 28%,transparent)}
+.interactive-control{position:relative;isolation:isolate;overflow:hidden;--tilt-x:0deg;--tilt-y:0deg}
+.interaction-ripple{position:absolute;z-index:0;width:12px;height:12px;border-radius:50%;pointer-events:none;background:color-mix(in srgb,var(--cyan,#00f0ff) 34%,transparent);mix-blend-mode:screen;transform:translate(-50%,-50%) scale(0);animation:control-ripple 560ms ease-out forwards}
+.chat-launcher.interactive-control,.local-ai-launcher.interactive-control{position:fixed}
+.interactive-control>.interaction-label,.interactive-control>:not(.interaction-ripple){position:relative;z-index:1}
+select{appearance:none;padding-right:2.35rem!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .75rem center;background-size:1rem;cursor:pointer;transition:transform var(--motion-medium) var(--motion-ease),border-color var(--motion-fast) ease,box-shadow var(--motion-medium) var(--motion-ease),background-position var(--motion-medium) var(--motion-ease)}
+select:hover{transform:perspective(500px) translateY(-2px) rotateX(var(--tilt-y,0deg)) rotateY(var(--tilt-x,0deg));border-color:color-mix(in srgb,var(--cyan,#00f0ff) 65%,var(--border,#1e293b));box-shadow:0 4px 16px rgba(0,0,0,.2)}
+select:focus,select:focus-visible{transform:translateY(-2px) scale(1.012);background-position:right .65rem center;box-shadow:0 0 0 3px color-mix(in srgb,var(--cyan,#00f0ff) 18%,transparent),0 10px 24px rgba(0,0,0,.24)}
+select option{color:var(--text,#f8fafc);background:var(--card,#121824)}
+body.anniversary-mode select:hover,body.anniversary-mode select:focus{border-color:var(--cyan);box-shadow:0 0 0 3px color-mix(in srgb,var(--cyan) 18%,transparent),0 10px 24px rgba(0,0,0,.24)}
+.anniversary-canvas{position:fixed;z-index:0;inset:0;width:100%;height:100%;pointer-events:none;opacity:1}
+body.anniversary-mode>main,body.anniversary-mode>footer,body.anniversary-mode>.login-main{position:relative;z-index:1}
+.anniversary-curtain{position:fixed;z-index:3;top:0;bottom:0;width:clamp(15px,3vw,42px);pointer-events:none;opacity:.68;background:repeating-linear-gradient(90deg,rgba(98,28,65,.88) 0 7px,rgba(194,55,107,.46) 9px 12px,rgba(76,24,62,.86) 16px 22px);filter:drop-shadow(0 0 14px rgba(255,131,181,.18))}
+.anniversary-curtain::before{position:absolute;top:0;left:-8px;width:calc(100% + 16px);height:clamp(46px,10vh,100px);background:linear-gradient(180deg,#401b3c,#9b3868 60%,transparent);border-radius:0 0 50% 50%;content:""}
+.anniversary-curtain-left{left:0;border-right:1px solid rgba(255,205,123,.3)}
+.anniversary-curtain-right{right:0;border-left:1px solid rgba(255,205,123,.3)}
+.anniversary-banner{min-height:56px;gap:.85rem;overflow:hidden;background:linear-gradient(110deg,#1e1738,#572b54 36%,#78334c 50%,#572b54 64%,#1e1738);box-shadow:0 5px 24px rgba(255,131,181,.15);font-size:.8rem}
+.anniversary-banner::before,.anniversary-banner::after{position:absolute;top:0;width:clamp(35px,8vw,110px);height:100%;background:repeating-linear-gradient(135deg,rgba(255,255,255,.08) 0 5px,transparent 5px 11px);content:""}
+.anniversary-banner::before{left:0}.anniversary-banner::after{right:0}
+.anniversary-banner .anniversary-icon{font-size:1.15rem;text-shadow:0 0 12px currentColor}
+.anniversary-banner strong{display:inline-block;text-shadow:0 0 15px rgba(255,220,150,.45);animation:placard-glow 2.6s ease-in-out infinite}
+body.anniversary-mode .dossier-sidebar,body.anniversary-mode .dossier-detail{box-shadow:0 12px 35px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.025)}
+body.anniversary-mode .dossier-list-item:hover,body.anniversary-mode .dossier-list-item[aria-pressed=true]{box-shadow:inset 3px 0 var(--cyan),0 6px 18px rgba(247,198,92,.09)}
+body.anniversary-mode .filter-search:focus-within,body.anniversary-mode .form-control:focus{box-shadow:0 0 0 3px color-mix(in srgb,var(--cyan) 17%,transparent),0 8px 24px rgba(0,0,0,.2)}
+@keyframes birthday-float{0%,100%{transform:translateY(0) rotate(-8deg)}50%{transform:translateY(12px) rotate(8deg)}}
+@keyframes birthday-bob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-3px) rotate(6deg)}}
+@keyframes control-ripple{to{opacity:0;transform:translate(-50%,-50%) scale(22)}}
+@keyframes placard-glow{0%,100%{filter:drop-shadow(0 0 0 rgba(255,220,150,0))}50%{filter:drop-shadow(0 0 8px rgba(255,220,150,.65))}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+@media(max-width:780px){.anniversary-curtain{width:14px;opacity:.35}.anniversary-banner{padding-inline:1.6rem;font-size:.7rem}}
+@media(prefers-reduced-motion:reduce){.anniversary-canvas,.anniversary-curtain{display:none!important}}

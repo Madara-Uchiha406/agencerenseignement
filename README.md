@@ -8,6 +8,7 @@ Portail français organisé en pages séparées, avec Supabase pour l’authenti
 - `messages.html` / `messages.css` : boîte de réception des agents.
 - `maintenance.html` / `maintenance.css` : réglages de maintenance réservés au superadmin.
 - `chat-widget.css` : bulle de messagerie partagée sur les pages du site.
+- `anniversary.css` : animations d’interface, respect de la préférence de réduction des animations et thème anniversaire.
 - `connexion.html` / `connexion.css` : connexion des comptes agents.
 - `agents.html` / `agents.css` : gestion des comptes, réservée au niveau 5.
 - `journal.html` / `journal.css` : journal d’audit, réservé aux niveaux 4 et 5.
@@ -32,6 +33,8 @@ Portail français organisé en pages séparées, avec Supabase pour l’authenti
 7. Publiez les fichiers du site sur un hébergement statique via HTTPS.
 
 Le niveau d’accès agent est compris entre 1 et 5. Les dossiers vont du niveau 0 à 5 ; les visiteurs et tous les agents de niveau 1 voient les dossiers de niveau 0 et 1. Un dossier au statut `Classified` est forcé au niveau 5 côté base. Les changements de dossiers et de comptes, ainsi que les connexions et déconnexions, alimentent le journal.
+
+La date de création officielle du Site 11 est le **16 octobre 2026**. Le thème anniversaire s’active automatiquement chaque 16 octobre (avec une bannière de lancement pour 2026, puis le numéro d’anniversaire les années suivantes), avec rideaux décoratifs et feux d’artifice animés. Les boutons réagissent au pointeur et au clic, et les menus déroulants ont un état de focus/hover animé. Si le système indique « réduire les animations », les animations décoratives sont désactivées.
 
 ## Dossiers
 
