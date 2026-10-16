@@ -45,6 +45,25 @@ Les agents peuvent activer les alertes depuis le bouton dans l’en-tête. Tant 
 
 Les comptes anonymes Supabase identifient les visiteurs et ne sont pas des comptes agents. Un visiteur qui efface les données de son navigateur ne pourra plus retrouver ses conversations précédentes.
 
+## Assistant IA local
+
+Une bulle **Assistant IA** est disponible sur les pages du portail. Elle utilise le modèle open source `qwen2.5:7b` exécuté par Ollama sur le PC où le visiteur ouvre le site ; le PC doit rester allumé avec Ollama et le relais local actifs. L’assistant ne fonctionne donc pas pour les visiteurs distants qui n’ont pas Ollama installé sur leur propre appareil.
+
+Le relais Node.js sans dépendances se trouve dans `ai-local/server.mjs`. Il lit l’URL et la clé publique Supabase dans `config.js`, écoute uniquement sur `127.0.0.1:11435` et n’autorise par défaut que l’origine GitHub Pages `https://madara-uchiha406.github.io`. Il vérifie le jeton Supabase et le niveau réel du profil agent côté serveur. Les visiteurs et agents de niveaux 1 à 4 reçoivent uniquement un prompt d’informations publiques du site et une limite de réponse réduite ; les agents actifs de niveau 5 obtiennent un mode généraliste. Aucun dossier, message privé, compte ou journal n’est envoyé au modèle. L’IA peut néanmoins se tromper et ses réponses doivent être vérifiées.
+
+### Démarrage sur Windows
+
+1. Installez Node.js 20 ou une version plus récente si ce n’est pas déjà fait.
+2. Lancez Ollama et vérifiez que le modèle est disponible avec `ollama run qwen2.5:7b`.
+3. Dans une autre fenêtre PowerShell, depuis la racine du dépôt, lancez :
+   ```powershell
+   cd E:\AlanuCopyes\Github\agencerenseignement\ai-local
+   node .\server.mjs
+   ```
+4. Gardez la fenêtre du relais ouverte, ainsi qu’Ollama. Publiez ensuite les fichiers du site : `app.js`, `chat-widget.css`, `ai-local/server.mjs` et `README.md`.
+
+Si le site est servi depuis une autre origine, définissez `SITE_ORIGIN` dans l’environnement de la fenêtre PowerShell avant `node .\server.mjs`, avec uniquement l’origine exacte du site (schéma et nom d’hôte, sans chemin). Ne configurez pas `OLLAMA_HOST` sur `0.0.0.0` et ne redirigez pas le port du relais sur Internet. Le relais protège les demandes faites depuis le site en vérifiant Supabase ; l’utilisateur qui contrôle le PC peut toutefois toujours lancer Ollama directement depuis son propre terminal.
+
 ## Gestion des comptes
 
 Le compte officiel marqué par `supabase/first-admin.sql` est exempté des restrictions hiérarchiques. Les autres gestionnaires (niveau 5) ne peuvent pas modifier ou supprimer leur propre compte, les comptes du même niveau ou ceux de niveau supérieur ; ils ne peuvent pas non plus créer ou promouvoir un compte à leur niveau ou au-dessus. Les contrôles sont appliqués dans la fonction Edge `manage-agent`, pas uniquement dans l’interface. Redéployez cette fonction après mise à jour du code.

@@ -1282,6 +1282,125 @@ async function initializeChatWidget() {
   });
 }
 
+function appendLocalAiWidget() {
+  const root = document.createElement("div");
+  root.id = "site-local-ai";
+  root.innerHTML = `
+    <button class="local-ai-launcher" id="local-ai-launcher" type="button" aria-label="Ouvrir l’assistant IA" aria-expanded="false">
+      <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span>Assistant IA</span>
+    </button>
+    <section class="local-ai-panel" id="local-ai-panel" role="dialog" aria-modal="false" aria-labelledby="local-ai-title" hidden>
+      <header class="chat-panel-header">
+        <div><span class="chat-eyebrow">Ollama · Qwen 2.5</span><h2 id="local-ai-title">Assistant IA</h2></div>
+        <button class="chat-close" id="local-ai-close" type="button" aria-label="Fermer l’assistant IA">×</button>
+      </header>
+      <div class="local-ai-content">
+        <p class="local-ai-notice" id="local-ai-notice"></p>
+        <div class="local-ai-thread" id="local-ai-thread" aria-live="polite"></div>
+        <p class="local-ai-feedback" id="local-ai-feedback" role="status" aria-live="polite"></p>
+        <form class="local-ai-form" id="local-ai-form">
+          <label class="visually-hidden" for="local-ai-input">Votre question</label>
+          <textarea id="local-ai-input" maxlength="4000" required placeholder="Posez votre question…"></textarea>
+          <button id="local-ai-send" type="submit" aria-label="Envoyer la question"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i></button>
+        </form>
+      </div>
+    </section>`;
+  document.body.appendChild(root);
+}
+
+async function initializeLocalAiWidget() {
+  appendLocalAiWidget();
+  const panel = document.getElementById("local-ai-panel");
+  const launcher = document.getElementById("local-ai-launcher");
+  const thread = document.getElementById("local-ai-thread");
+  const feedback = document.getElementById("local-ai-feedback");
+  const form = document.getElementById("local-ai-form");
+  const input = document.getElementById("local-ai-input");
+  const sendButton = document.getElementById("local-ai-send");
+  const notice = document.getElementById("local-ai-notice");
+  const history = [];
+  const isLevelFive = Boolean(currentAgent?.is_active && currentAgent.access_level >= 5);
+  const userLimit = isLevelFive ? 4000 : 1200;
+
+  input.maxLength = userLimit;
+  input.placeholder = isLevelFive
+    ? "Posez votre question…"
+    : "Question sur les informations publiques du site…";
+  notice.textContent = isLevelFive
+    ? "Mode niveau 5 · Questions générales. Aucun dossier n’est transmis à l’IA."
+    : "Réponses limitées aux informations publiques du site. L’assistant ne consulte aucun dossier.";
+
+  const addMessage = (role, content) => {
+    const message = document.createElement("div");
+    message.className = `local-ai-message ${role === "user" ? "from-user" : "from-assistant"}`;
+    message.textContent = content;
+    thread.appendChild(message);
+    thread.scrollTop = thread.scrollHeight;
+  };
+
+  addMessage(
+    "assistant",
+    isLevelFive
+      ? "Je peux répondre aux questions générales grâce au modèle local de ce PC."
+      : "Je peux aider à comprendre les pages et les informations publiques du Site 11."
+  );
+
+  const setOpen = open => {
+    panel.hidden = !open;
+    launcher.setAttribute("aria-expanded", String(open));
+    if (open) input.focus();
+  };
+  launcher.addEventListener("click", () => setOpen(panel.hidden));
+  document.getElementById("local-ai-close").addEventListener("click", () => setOpen(false));
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const question = input.value.trim();
+    if (!question || question.length > userLimit || sendButton.disabled) return;
+
+    addMessage("user", question);
+    history.push({ role: "user", content: question });
+    input.value = "";
+    sendButton.disabled = true;
+    feedback.textContent = "L’IA prépare sa réponse sur ce PC…";
+    feedback.classList.remove("success");
+
+    try {
+      const client = getSupabase();
+      const { data, error } = await client.auth.getSession();
+      if (error) throw error;
+      const token = data.session?.access_token;
+      const response = await fetch("http://127.0.0.1:11435/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ messages: history.slice(-10) }),
+        signal: AbortSignal.timeout(180000)
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `Le service IA a répondu avec le code ${response.status}.`);
+      if (typeof result.content !== "string" || !result.content.trim()) {
+        throw new Error("Le modèle n’a pas renvoyé de réponse.");
+      }
+      history.push({ role: "assistant", content: result.content });
+      addMessage("assistant", result.content);
+      feedback.textContent = "";
+    } catch (error) {
+      console.error("Impossible d’interroger l’assistant IA local :", error);
+      feedback.textContent = error.name === "TimeoutError" || error.name === "AbortError"
+        ? "La réponse a dépassé le délai. Réessayez avec une question plus courte."
+        : error instanceof TypeError
+          ? "Service IA local introuvable. Vérifiez qu’Ollama et le relais local sont démarrés sur ce PC."
+          : error.message || "Impossible d’obtenir une réponse de l’IA.";
+    } finally {
+      sendButton.disabled = false;
+      input.focus();
+    }
+  });
+}
+
 async function invokeAgentFunction(payload) {
   const { data, error } = await getSupabase().functions.invoke("manage-agent", { body: payload });
   if (error) {
@@ -1586,6 +1705,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (document.getElementById("agents-table-body")) setFeedback("agents-feedback", message);
     if (document.getElementById("activity-table-body")) setFeedback("activity-feedback", message);
     await initializeChatWidget();
+    await initializeLocalAiWidget();
     return;
   }
 
@@ -1618,4 +1738,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (document.getElementById("maintenance-feedback")) setFeedback("maintenance-feedback", friendlyError(error));
   }
   await initializeChatWidget();
+  await initializeLocalAiWidget();
 });
