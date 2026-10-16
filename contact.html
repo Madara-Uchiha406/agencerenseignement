@@ -38,9 +38,15 @@
     <p class="page-intro">Échangez directement avec l’équipe du Site 11. La messagerie conserve vos conversations et vous permet de retrouver les réponses et l’état de traitement.</p>
     <div class="contact-layout">
       <section class="panel">
-        <div class="panel-heading"><span class="panel-icon"><i class="fa-regular fa-comments" aria-hidden="true"></i></span><div><h2>Une question ? Écrivez-nous.</h2><p>Ouvrez la messagerie dans le coin inférieur gauche pour démarrer.</p></div></div>
-        <p>Vous pouvez envoyer un message sans créer de compte. Gardez le même navigateur pour retrouver vos conversations précédentes. Les statuts indiquent si votre demande est en attente, en cours ou traitée.</p>
-        <button class="btn-primary" id="open-contact-chat" type="button"><i class="fa-regular fa-comments" aria-hidden="true"></i> Ouvrir la messagerie</button>
+        <div class="panel-heading"><span class="panel-icon"><i class="fa-regular fa-comments" aria-hidden="true"></i></span><div><h2>Une question ? Écrivez-nous.</h2><p>Envoyez votre message ici et suivez la réponse dans la messagerie.</p></div></div>
+        <p>Envoyez votre message directement ici : la page ne sera pas rechargée. Gardez le même navigateur pour retrouver les réponses et vos anciennes conversations.</p>
+        <form class="contact-message-form" id="contact-message-form">
+          <div class="form-group"><label for="contact-visitor-name">Votre nom ou pseudonyme</label><input class="form-control" id="contact-visitor-name" maxlength="100" autocomplete="name" required placeholder="Nom ou pseudonyme"></div>
+          <div class="form-group"><label for="contact-message-body">Votre message</label><textarea class="form-control" id="contact-message-body" maxlength="4000" required placeholder="Comment pouvons-nous vous aider ?"></textarea></div>
+          <p class="form-feedback" id="contact-message-feedback" role="status" aria-live="polite"></p>
+          <button class="btn-primary" id="contact-message-submit" type="submit"><i class="fa-regular fa-paper-plane" aria-hidden="true"></i> Envoyer le message</button>
+        </form>
+        <button class="text-link contact-open-chat" id="open-contact-chat" type="button"><i class="fa-regular fa-comments" aria-hidden="true"></i> Retrouver mes conversations précédentes</button>
       </section>
       <aside class="contact-aside">
         <section class="info-card"><i class="fa-solid fa-clock" aria-hidden="true"></i><h2>Suivi de la demande</h2><p>Retrouvez vos échanges et vérifiez leur statut à tout moment depuis la bulle de messagerie.</p></section>

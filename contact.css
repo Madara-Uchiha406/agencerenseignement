@@ -39,6 +39,12 @@ textarea.form-control{min-height:150px;resize:vertical}
 .btn-primary{cursor:pointer}
 .form-feedback{min-height:1.3rem;margin:.8rem 0 0;color:var(--cyan);font-size:.84rem;line-height:1.5}
 .form-feedback.success{color:var(--green)}
+.contact-message-form{margin-top:1.25rem}
+.contact-message-form .form-group{margin-bottom:1rem}
+.contact-message-form .form-control{min-height:44px}
+.contact-message-form textarea.form-control{min-height:140px}
+.contact-message-form button:disabled{opacity:.65;cursor:wait}
+.contact-open-chat{margin-top:1rem;padding:0;color:var(--cyan);background:transparent;border:0;cursor:pointer}
 .contact-aside{display:grid;gap:1rem}
 .info-card{padding:1.25rem}
 .info-card>i{margin-bottom:.9rem;color:var(--cyan)}

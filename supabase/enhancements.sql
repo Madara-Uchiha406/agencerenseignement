@@ -101,6 +101,15 @@ with check (
   )
 );
 
+drop policy if exists "Level five agents can delete chats" on public.chat_conversations;
+create policy "Level five agents can delete chats"
+on public.chat_conversations for delete to authenticated
+using (
+  (select public.agent_is_active())
+  and coalesce((select public.current_agent_level()), 0) >= 5
+);
+grant delete on public.chat_conversations to authenticated;
+
 create or replace function public.delete_chat_attachment_object()
 returns trigger
 language plpgsql

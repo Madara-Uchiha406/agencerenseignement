@@ -54,7 +54,7 @@ function setFeedback(elementId, message, isError = true) {
 function friendlyError(error) {
   if (!error) return "Une erreur inattendue est survenue.";
   if (error.code === "23505") return "Cette adresse e-mail est déjà utilisée.";
-  if (error.code === "42501" || error.status === 403) return "Votre niveau d’accès ne permet pas cette action.";
+  if (error.code === "42501" || error.status === 403) return "Supabase a refusé cette action. Si votre compte est niveau 5, exécutez la dernière version de supabase/enhancements.sql et vérifiez que le compte est actif.";
   if (error.code === "PGRST116") return "Aucun résultat trouvé.";
   return error.message || "Une erreur inattendue est survenue.";
 }
@@ -900,6 +900,37 @@ async function initializeMessagesPage() {
   window.setInterval(refresh, 10000);
 }
 
+async function initializeContactForm() {
+  const form = document.getElementById("contact-message-form");
+  if (!form) return;
+  if (currentAgent) {
+    form.hidden = true;
+    document.getElementById("open-contact-chat").hidden = true;
+    setFeedback("contact-message-feedback", "Vous êtes connecté comme agent. Utilisez la page Messages pour répondre aux visiteurs.");
+    return;
+  }
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const submitButton = document.getElementById("contact-message-submit");
+    submitButton.disabled = true;
+    setFeedback("contact-message-feedback", "");
+    try {
+      const visitorName = document.getElementById("contact-visitor-name").value.trim();
+      const message = document.getElementById("contact-message-body").value.trim();
+      await startVisitorConversation(visitorName, message);
+      form.reset();
+      setFeedback("contact-message-feedback", "Message envoyé sans quitter cette page. Retrouvez la conversation dans la bulle Messagerie en bas à gauche.", false);
+      const chatPanel = document.getElementById("chat-panel");
+      if (chatPanel?.hidden) document.getElementById("chat-launcher")?.click();
+    } catch (error) {
+      console.error("Impossible d’envoyer le message du formulaire Contact :", error);
+      setFeedback("contact-message-feedback", friendlyError(error));
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+}
+
 function showAgentNotification(title, body, targetPage) {
   const toast = document.createElement("div");
   toast.className = "agent-notification-toast";
@@ -1574,6 +1605,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     else if (document.getElementById("messages-conversation-list")) await initializeMessagesPage();
     else if (document.getElementById("maintenance-controls")) await initializeMaintenancePage();
     else {
+      await initializeContactForm();
       const agent = await loadCurrentAgent();
       if (loginForm && agent) window.location.replace("dashboard.html");
     }
