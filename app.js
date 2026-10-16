@@ -86,8 +86,8 @@ function animateAnniversaryFireworks(canvas) {
   let nextBurst = 0;
   let animationFrame = 0;
   let lastFrame = 0;
-  const maxParticles = 28;
-  const frameInterval = 1000 / 24;
+  const maxParticles = 40;
+  const frameInterval = 1000 / 30;
 
   const resize = () => {
     const ratio = 1;
@@ -101,7 +101,7 @@ function animateAnniversaryFireworks(canvas) {
     const x = width * (.12 + Math.random() * .76);
     const y = height * (.12 + Math.random() * .4);
     const color = colors[Math.floor(Math.random() * colors.length)];
-    const count = 18 + Math.floor(Math.random() * 7);
+    const count = 24 + Math.floor(Math.random() * 7);
     for (let index = 0; index < count && particles.length < maxParticles; index += 1) {
       const angle = Math.PI * 2 * index / count;
       const speed = 1 + Math.random() * 3.2;
@@ -109,8 +109,8 @@ function animateAnniversaryFireworks(canvas) {
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: 34 + Math.random() * 12,
-        maxLife: 46,
+        life: 38 + Math.random() * 14,
+        maxLife: 52,
         color,
         size: 1.2 + Math.random() * 1
       });
@@ -126,7 +126,7 @@ function animateAnniversaryFireworks(canvas) {
     context.clearRect(0, 0, width, height);
     if (timestamp >= nextBurst) {
       burst();
-      nextBurst = timestamp + 3200 + Math.random() * 1800;
+      nextBurst = timestamp + 2200 + Math.random() * 1000;
     }
     context.globalCompositeOperation = "lighter";
     for (let index = particles.length - 1; index >= 0; index -= 1) {
@@ -311,7 +311,8 @@ function currentPageKey() {
 
 function renderMaintenanceScreen(message) {
   const wrapper = document.createElement("main");
-  wrapper.style.cssText = "min-height:100vh;display:grid;place-content:center;padding:2rem;background:#0a0d14;color:#f8fafc;font-family:Inter,Arial,sans-serif;text-align:center";
+  wrapper.className = "maintenance-screen";
+  wrapper.style.cssText = "min-height:100vh;display:grid;place-content:center;padding:2rem;background:transparent;color:#f8fafc;font-family:Inter,Arial,sans-serif;text-align:center";
   const title = document.createElement("p");
   title.style.cssText = "margin:0 0 .75rem;color:#00f0ff;font:700 .8rem 'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase";
   title.textContent = "Maintenance";
@@ -326,7 +327,10 @@ function renderMaintenanceScreen(message) {
   contact.textContent = "Accès administrateur";
   contact.style.cssText = "justify-self:center;color:#00f0ff";
   wrapper.append(title, heading, description, contact);
-  document.body.replaceChildren(wrapper);
+  const decorations = Array.from(document.body.children).filter(element =>
+    element.matches(".anniversary-banner, .anniversary-canvas, .anniversary-curtain")
+  );
+  document.body.replaceChildren(...decorations, wrapper);
 }
 
 function showMaintenanceCheckWarning(error) {
@@ -1365,8 +1369,22 @@ function appendChatWidget() {
   document.body.appendChild(root);
 }
 
+function appendAgentMessagesLauncher() {
+  if (document.getElementById("agent-messages-launcher")) return;
+  const launcher = document.createElement("a");
+  launcher.id = "agent-messages-launcher";
+  launcher.className = "chat-launcher agent-messages-launcher";
+  launcher.href = "messages.html";
+  launcher.setAttribute("aria-label", "Ouvrir la boîte des messages visiteurs");
+  launcher.innerHTML = '<i class="fa-regular fa-comments" aria-hidden="true"></i><span>Messages agents</span>';
+  document.body.appendChild(launcher);
+}
+
 async function initializeChatWidget() {
-  if (currentAgent) return;
+  if (currentAgent) {
+    appendAgentMessagesLauncher();
+    return;
+  }
   appendChatWidget();
   const panel = document.getElementById("chat-panel");
   const launcher = document.getElementById("chat-launcher");
