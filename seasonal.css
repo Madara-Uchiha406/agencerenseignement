@@ -1,0 +1,41 @@
+.seasonal-theme-layer{display:contents}
+.seasonal-banner{position:relative;z-index:6;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:.45rem 1rem;min-height:48px;padding:.65rem 1rem;color:#f8fafc;background:linear-gradient(100deg,#111827,#263449 50%,#111827);border-bottom:1px solid #ffffff24;font:500 .78rem/1.45 var(--body,Inter,Arial,sans-serif);text-align:center}
+.seasonal-banner strong{font:700 .85rem var(--title,Inter,Arial,sans-serif);letter-spacing:.035em}
+.seasonal-banner>span{color:#d1d5db}
+body[class*="seasonal-"]> :not(#seasonal-theme-layer):not(.anniversary-canvas){position:relative;z-index:1}
+body.seasonal-halloween{--cyan:#f59e0b;--green:#a3e635;--bg:#100c18;--card:#1a1424;--border:#44304e;background:radial-gradient(ellipse at 50% -20%,#35203c 0,#100c18 58%)}
+body.seasonal-halloween .seasonal-banner{color:#ffe6b4;background:linear-gradient(100deg,#20142a,#4a2032 48%,#20142a);border-color:#f59e0b66}
+body.seasonal-halloween .seasonal-banner strong{color:#ffc75e}
+.seasonal-decorations{position:fixed;inset:0;z-index:4;pointer-events:none}
+.halloween-decorations span{position:absolute;font-size:clamp(1.35rem,3vw,2.8rem);filter:drop-shadow(0 0 12px #fb923c66);animation:seasonal-float 5s ease-in-out infinite}
+.halloween-decorations span:nth-child(1){top:18%;left:2.5%}
+.halloween-decorations span:nth-child(2){top:22%;right:5%;animation-delay:-2s}
+.halloween-decorations span:nth-child(3){bottom:16%;left:7%;animation-delay:-3s}
+.halloween-decorations span:nth-child(4){right:3%;bottom:13%;animation-delay:-1s}
+body.seasonal-armistice{--cyan:#bb8b53;--green:#899477;--bg:#101410;--card:#1a2019;--border:#394337;background:radial-gradient(ellipse at 50% -20%,#303a2b 0,#101410 60%)}
+body.seasonal-armistice .seasonal-banner{color:#ece1cc;background:linear-gradient(100deg,#1a211a,#34352b 48%,#1a211a);border-color:#bb8b5366}
+body.seasonal-armistice .seasonal-banner strong{color:#e5c78b}
+.armistice-decorations{display:flex;justify-content:space-between;align-items:flex-end;padding:0 clamp(1rem,6vw,5rem) 2.4rem}
+.armistice-poppy{align-self:flex-end;margin-bottom:6vh;color:#b54137;font-size:clamp(2rem,5vw,4rem);text-shadow:0 0 22px #b5413755}
+.armistice-graves{color:#d4cbb6;font-size:clamp(1.2rem,3vw,2.4rem);opacity:.48;text-shadow:0 0 16px #e5dfcb33}
+.armistice-helmet{align-self:flex-end;margin-bottom:7vh;color:#a7a58c;font-size:clamp(1.8rem,4vw,3.5rem);opacity:.7;filter:grayscale(1)}
+body.seasonal-easter{--cyan:#dc8b42;--green:#72a875;--bg:#13120e;--card:#211c15;--border:#58442c;background:radial-gradient(ellipse at 50% -20%,#44321f 0,#13120e 60%)}
+body.seasonal-easter .seasonal-banner{color:#f4e8d6;background:linear-gradient(100deg,#2c2019,#493021 48%,#2c2019);border-color:#e6a95b66}
+body.seasonal-easter .seasonal-banner strong{color:#f3c47d}
+.easter-decorations{display:flex;justify-content:space-between;align-items:flex-start;padding:clamp(5rem,14vh,9rem) clamp(1.25rem,8vw,7rem) 0}
+.easter-decorations span{font-size:clamp(1.2rem,3vw,2.7rem);opacity:.55;filter:drop-shadow(0 0 14px #e4b87955);animation:seasonal-float 5s ease-in-out infinite}
+.easter-decorations span:nth-child(2){margin-top:14vh;animation-delay:-2s}
+.easter-decorations span:nth-child(3){margin-top:6vh;animation-delay:-3s}
+.easter-hunt-status{position:fixed;right:1rem;bottom:1rem;z-index:24;padding:.65rem .85rem;color:#ffe7bd;background:#2c2019eF;border:1px solid #e6a95b66;border-radius:999px;box-shadow:0 8px 28px #0007;font:600 .78rem var(--body,Inter,Arial,sans-serif);pointer-events:none}
+.hidden-easter-egg{position:absolute;z-index:8;width:40px;height:40px;padding:0;background:transparent;border:1px solid transparent;border-radius:50%;opacity:.16;cursor:pointer;filter:drop-shadow(0 0 9px #ffd27a);transition:opacity .2s ease,transform .2s ease,background-color .2s ease}
+.hidden-easter-egg:hover,.hidden-easter-egg:focus-visible{opacity:1;transform:scale(1.2);background:#271d118c;outline:2px solid #f3c47d;outline-offset:2px}
+.seasonal-bastille{position:fixed;left:50%;bottom:0;z-index:2;width:min(280px,42vw);color:#f4e7d0;text-align:center;opacity:.43;pointer-events:none;transform:translateX(-50%)}
+.seasonal-bastille svg{display:block;width:100%;height:auto;filter:drop-shadow(0 0 16px #ffffff22)}
+.seasonal-bastille span{display:block;margin-bottom:.5rem;font:600 .56rem var(--code,monospace);letter-spacing:.14em}
+body.seasonal-bastille{--cyan:#f1c65b;--green:#4b9c74;--bg:#080f20;--card:#121b2b;--border:#263956;background:radial-gradient(ellipse at 50% -20%,#273858 0,#080f20 62%)}
+body.seasonal-bastille .seasonal-banner{color:#f3f3ee;background:linear-gradient(100deg,#172d55,#23324a 50%,#772a3d);border-color:#ffffff35}
+body.seasonal-bastille .seasonal-banner strong{color:#ffd166}
+.seasonal-fireworks{position:fixed;inset:0;z-index:0;width:100%;height:100%;pointer-events:none;opacity:.8}
+@keyframes seasonal-float{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-9px) rotate(5deg)}}
+@media(max-width:600px){.seasonal-banner{font-size:.7rem}.seasonal-banner strong{font-size:.77rem}.armistice-decorations{padding-inline:1rem}.easter-hunt-status{right:.5rem;bottom:.5rem;font-size:.7rem}.seasonal-bastille{width:min(250px,58vw)}}
+@media(prefers-reduced-motion:reduce){.halloween-decorations span,.easter-decorations span{animation:none}.seasonal-fireworks{display:none}}

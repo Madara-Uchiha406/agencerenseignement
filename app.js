@@ -309,7 +309,92 @@ function currentPageKey() {
   return window.location.pathname.split("/").filter(Boolean).pop() || "index.html";
 }
 
+function initializeMaintenanceNetwork() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    || document.getElementById("maintenance-network-canvas")) return;
+  const canvas = document.createElement("canvas");
+  canvas.id = "maintenance-network-canvas";
+  canvas.className = "maintenance-network-canvas";
+  canvas.setAttribute("aria-hidden", "true");
+  document.body.prepend(canvas);
+  const context = canvas.getContext("2d");
+  if (!context) {
+    console.error("Impossible de créer le fond animé de la page Maintenance.");
+    canvas.remove();
+    return;
+  }
+
+  const points = [];
+  let width = 0;
+  let height = 0;
+  let frame = 0;
+  let lastFrame = 0;
+  const resize = () => {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+    const count = Math.min(58, Math.max(24, Math.round(width * height / 26000)));
+    while (points.length > count) points.pop();
+    while (points.length < count) {
+      points.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - .5) * .32,
+        vy: (Math.random() - .5) * .32
+      });
+    }
+  };
+  const draw = timestamp => {
+    if (document.hidden) return;
+    if (timestamp - lastFrame < 1000 / 24) {
+      frame = requestAnimationFrame(draw);
+      return;
+    }
+    lastFrame = timestamp;
+    context.clearRect(0, 0, width, height);
+    for (let first = 0; first < points.length; first += 1) {
+      const point = points[first];
+      point.x += point.vx;
+      point.y += point.vy;
+      if (point.x < 0 || point.x > width) point.vx *= -1;
+      if (point.y < 0 || point.y > height) point.vy *= -1;
+      for (let second = first + 1; second < points.length; second += 1) {
+        const other = points[second];
+        const distance = Math.hypot(point.x - other.x, point.y - other.y);
+        if (distance > 150) continue;
+        context.strokeStyle = `rgba(89, 204, 215, ${(1 - distance / 150) * .23})`;
+        context.lineWidth = 1;
+        context.beginPath();
+        context.moveTo(point.x, point.y);
+        context.lineTo(other.x, other.y);
+        context.stroke();
+      }
+      context.fillStyle = "rgba(132, 226, 230, .58)";
+      context.beginPath();
+      context.arc(point.x, point.y, 1.8, 0, Math.PI * 2);
+      context.fill();
+    }
+    frame = requestAnimationFrame(draw);
+  };
+  const onVisibilityChange = () => {
+    cancelAnimationFrame(frame);
+    if (!document.hidden) {
+      lastFrame = 0;
+      frame = requestAnimationFrame(draw);
+    } else {
+      context.clearRect(0, 0, width, height);
+    }
+  };
+
+  resize();
+  window.addEventListener("resize", resize, { passive: true });
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  frame = requestAnimationFrame(draw);
+}
+
 function renderMaintenanceScreen(message) {
+  initializeMaintenanceNetwork();
   const wrapper = document.createElement("main");
   wrapper.className = "maintenance-screen";
   wrapper.style.cssText = "min-height:100vh;display:grid;place-content:center;padding:2rem;background:transparent;color:#f8fafc;font-family:Inter,Arial,sans-serif;text-align:center";
@@ -328,7 +413,7 @@ function renderMaintenanceScreen(message) {
   contact.style.cssText = "justify-self:center;color:#00f0ff";
   wrapper.append(title, heading, description, contact);
   const decorations = Array.from(document.body.children).filter(element =>
-    element.matches(".anniversary-banner, .anniversary-canvas, .anniversary-curtain")
+    element.matches(".anniversary-banner, .anniversary-canvas, .anniversary-curtain, #seasonal-theme-layer, #maintenance-network-canvas")
   );
   document.body.replaceChildren(...decorations, wrapper);
 }
@@ -2020,7 +2105,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     else if (document.getElementById("agents-table-body")) await initializeAgentsPage();
     else if (document.getElementById("activity-table-body")) await initializeActivityPage();
     else if (document.getElementById("messages-conversation-list")) await initializeMessagesPage();
-    else if (document.getElementById("maintenance-controls")) await initializeMaintenancePage();
+    else if (document.getElementById("maintenance-controls")) {
+      initializeMaintenanceNetwork();
+      await initializeMaintenancePage();
+    }
     else {
       await initializeContactForm();
       const agent = await loadCurrentAgent();
